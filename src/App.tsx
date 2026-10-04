@@ -113,7 +113,18 @@ function App() {
 
   return (
     <main className="ocean-page">
-      <div className="page-content">
+      <OceanMap
+        tool={tool}
+        placements={placements}
+        frames={frames}
+        trajectories={trajectories}
+        timeSeconds={timeSeconds}
+        onPlace={placeItem}
+        onRemove={removeItem}
+        onInvalidPlacement={() => setMessage("Try a spot inside the sparkling water zone.")}
+      />
+
+      <div className="map-overlay">
         <motion.header className="topbar" initial={{ opacity: 0, y: -24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }}>
           <motion.a className="brand" href="#top" aria-label="PlasticPaths home" whileHover={{ y: -2 }}>
             <span className="brand-mark"><Waves size={27} /></span>
@@ -130,46 +141,37 @@ function App() {
           <motion.button className="icon-button" type="button" aria-label="Open help" whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}><CircleHelp size={22} /></motion.button>
         </motion.header>
 
-        <div className="explorer-grid">
-          <motion.section className="live-map-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.1 }}>
-            <div className="map-toolbar"><span className="map-status"><span className="status-dot" /> Live current map</span><span className="map-hint">Click the water to place litter</span></div>
-            <div className="live-map-stage">
-              <OceanMap
-                tool={tool}
-                placements={placements}
-                frames={frames}
-                trajectories={trajectories}
-                timeSeconds={timeSeconds}
-                onPlace={placeItem}
-                onRemove={removeItem}
-                onInvalidPlacement={() => setMessage("Try a spot inside the sparkling water zone.")}
-              />
-            </div>
-            <div className="map-footer"><span><strong>{Object.values(counts).reduce((total, count) => total + count, 0)} items</strong> in the experiment</span><span>{formatTime(timeSeconds)} into the journey</span></div>
-          </motion.section>
+        <motion.aside className="tool-panel" aria-label="Map tools" initial={{ opacity: 0, x: -28 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.55, delay: 0.15 }}>
+          <div className="panel-heading">
+            <span className="eyebrow">Choose a tool</span>
+            <h1>Make a splash</h1>
+          </div>
+          <div className="tool-grid">
+            {tools.map(({ id, label, detail, icon: Icon }) => (
+              <motion.button
+                className={`tool-button ${tool === id ? "tool-button--active" : ""}`}
+                key={id}
+                type="button"
+                aria-pressed={tool === id}
+                onClick={() => setTool(tool === id ? "explore" : id)}
+                whileHover={{ x: 5 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <span className={`tool-icon tool-icon--${id}`}><Icon size={24} /></span>
+                <span><strong>{label}</strong><small>{detail}</small></span>
+                {tool === id && <motion.span className="tool-selection-dot" layoutId="tool-selection" />}
+              </motion.button>
+            ))}
+          </div>
+          <div className="current-key"><span>↗</span><p><strong>Ocean current</strong>Arrows show water direction</p></div>
+        </motion.aside>
 
-          <motion.aside className="tool-panel" aria-label="Map tools" initial={{ opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.55, delay: 0.2 }}>
-            <div className="panel-heading"><span className="eyebrow">Choose a tool</span><h1>Make a splash</h1></div>
-            <div className="tool-grid">
-              {tools.map(({ id, label, detail, icon: Icon }) => (
-                <motion.button className={`tool-button ${tool === id ? "tool-button--active" : ""}`} key={id} type="button" aria-pressed={tool === id} onClick={() => setTool(tool === id ? "explore" : id)} whileHover={{ x: 5 }} whileTap={{ scale: 0.98 }}>
-                  <span className={`tool-icon tool-icon--${id}`}><Icon size={24} /></span>
-                  <span><strong>{label}</strong><small>{detail}</small></span>
-                  {tool === id && <motion.span className="tool-selection-dot" layoutId="tool-selection" />}
-                </motion.button>
-              ))}
-            </div>
-            <div className="current-key"><span>↗</span><p><strong>Ocean current</strong>Arrows show water direction</p></div>
-          </motion.aside>
-        </div>
+        <motion.section className="guide-bubble" aria-live="polite" initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.35 }}>
+          <motion.div className="mascot" aria-hidden="true" animate={{ y: [0, -4, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}><span>•</span><span>•</span><b>⌣</b></motion.div>
+          <div><span className="eyebrow">Finn says</span><AnimatePresence mode="wait"><motion.p key={message} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>{message}</motion.p></AnimatePresence></div>
+        </motion.section>
 
-        <div className="learn-row">
-          <motion.section className="guide-bubble" aria-live="polite" initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.35 }}>
-            <motion.div className="mascot" aria-hidden="true" animate={{ y: [0, -4, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}><span>•</span><span>•</span><b>⌣</b></motion.div>
-            <div><span className="eyebrow">Finn says</span><AnimatePresence mode="wait"><motion.p key={message} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>{message}</motion.p></AnimatePresence></div>
-          </motion.section>
-
-          <motion.section className="bottom-dock" aria-label="Simulation controls" initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}>
+        <motion.section className="bottom-dock" aria-label="Simulation controls" initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}>
           <div className="status-row" aria-label="Simulation results">
             {(Object.keys(statusLabels) as ParticleStatus[]).map((status) => (
               <motion.div className={`status-chip status-chip--${status}`} key={status} layout>
@@ -217,8 +219,7 @@ function App() {
               <motion.button className={comparison === "with" ? "active" : ""} type="button" onClick={() => setComparison("with")} whileTap={{ scale: 0.96 }}>With cleanup</motion.button>
             </div>
           </div>
-          </motion.section>
-        </div>
+        </motion.section>
 
         <motion.button className="source-button" type="button" whileHover={{ y: -3 }} whileTap={{ scale: 0.96 }}><Info size={15} /> Data & assumptions</motion.button>
       </div>
