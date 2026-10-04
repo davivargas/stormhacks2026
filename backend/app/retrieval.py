@@ -31,9 +31,20 @@ class EducationalRetriever(Protocol):
 
 def summary_search_text(summary: SimulationSummary) -> str:
     event_types = " ".join(event.type.replace("_", " ") for event in summary.events)
+    event_locations = " ".join(event.location or "" for event in summary.events)
     assumptions = " ".join(summary.assumptions)
+    geography = ""
+    if summary.geography is not None:
+        places = [
+            summary.geography.start.label,
+            summary.geography.end.label,
+            *(summary.geography.traversed_regions),
+        ]
+        if summary.geography.landfall is not None:
+            places.append(summary.geography.landfall.label)
+        geography = " ".join(places)
     return (
-        f"{summary.litter_type.replace('_', ' ')} {event_types} "
+        f"{summary.litter_type.replace('_', ' ')} {event_types} {event_locations} {geography} "
         f"{summary.final_status.value.replace('_', ' ')} {assumptions}"
     )
 

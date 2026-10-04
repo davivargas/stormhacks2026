@@ -9,7 +9,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 from app import config, db
-from app.api import router as story_router
+from app.api import run_story_router, router as story_router
 from app.cache import SQLiteCache
 from app.config import Settings, get_settings
 from app.providers import ElevenLabsAudioProvider, GeminiStoryGenerator
@@ -105,6 +105,7 @@ def create_app(
 
     app.include_router(simulation_router)
     app.include_router(story_router)
+    app.include_router(run_story_router)
 
     @app.get("/health")
     async def health() -> dict[str, str]:

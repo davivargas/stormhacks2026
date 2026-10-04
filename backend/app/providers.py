@@ -36,12 +36,14 @@ that protects the ocean. Naturally signal once that Finn's map is showing one po
 Never open with "This is a simulation" or use clinical phrases such as "the simulation recorded,"
 "final status," or "computer simulation."
 
-The movement, event timing, and final outcome must match the simulation. Mention every supplied
-event in order. For a released event at hour 0, do not say "hour 0"; open that event naturally with
-"When you littered the <litter item>" and include its supplied location. For every later event,
-mention its supplied hour number with phrases such as "At hour 6" or "By hour 6." If the last event occurs before the total duration, do not imply that it happened at the end
-of the duration. Never invent animals, animal encounters, named locations, weather, distances, or
-environmental damage. A character name and harmless personality are allowed. Respect every supplied
+The movement, event timing, route geography, and final outcome must match the simulation. Mention
+every supplied event in order. For a released event at hour 0, do not say "hour 0"; open that event
+naturally with "When you littered the <litter item>" and include its supplied location. For every
+later event, mention its supplied hour number with phrases such as "At hour 6" or "By hour 6." If
+the last event occurs before the total duration, do not imply that it happened at the end of the
+duration. Use only supplied place names from event locations or route geography; never infer extra
+countries, oceans, animals, animal encounters, named locations, weather, distances, or environmental
+damage. A character name and harmless personality are allowed. Respect every supplied
 assumption and state each one briefly; do not say wind or waves affected movement when they are excluded. If the status is
 outside_domain or missing_data, say the later outcome is unknown. End with one simple protective
 action that explicitly follows from a fact in the retrieved passages. Never make littering sound
@@ -217,7 +219,7 @@ class DeterministicStoryGenerator:
             optional_clauses.append("This possible path follows ocean currents.")
         if "wind" in assumptions and "wave" in assumptions:
             optional_clauses.append("Wind and waves stay out of this adventure.")
-        if "sink" in assumptions or "break down" in assumptions:
+        if "sink" in assumptions or "break down" in assumptions or "breakdown" in assumptions:
             optional_clauses.append(f"{character} does not sink or break down here.")
         closing = "Help keep real ocean journeys clean by putting litter in the right bin."
         for clause in optional_clauses:
@@ -226,6 +228,14 @@ class DeterministicStoryGenerator:
                 script += f"{clause} "
         script += closing
 
+        if story_word_count(script) > 80:
+            script = (
+                f"Meet {character}, a curious traveler on Finn's ocean map. "
+                f"{event_sentence} {outcomes[summary.final_status]} "
+                "This possible path follows currents. "
+                "It does not sink or break down here. "
+                "Put litter in the right bin to protect the ocean."
+            )
         if story_word_count(script) < 50:
             script += " Every piece placed safely in a bin is one less ocean traveler."
         return StoryDraft(title=f"{character}'s Ocean Adventure", script=script)

@@ -17,8 +17,7 @@ import {
 import { OceanMap } from "./OceanMap";
 import { requestSimulation } from "./simulationApi";
 import type { SimulateResponse } from "./simulationApi";
-import { requestOceanStory, requestStoryAudio } from "./storyApi";
-import type { StorySimulationSummary } from "./storyApi";
+import { requestStoryAudio, requestStoryForRun } from "./storyApi";
 import {
   INITIAL_PLACEMENTS,
   interpolateFrame,
@@ -72,54 +71,6 @@ function getNarrationLineIndex(lines: string[], progress: number) {
   return lines.length - 1;
 }
 
-function buildStorySummary(
-  simulationRun: SimulateResponse | null,
-  selectedParticleId: string | null,
-): StorySimulationSummary | null {
-  const trajectories = simulationRun?.trajectories ?? [];
-  const trajectory = trajectories.find(({ id }) => id === selectedParticleId) ?? trajectories[0];
-  if (!simulationRun || !trajectory) return null;
-
-  const lastSample = trajectory.samples.at(-1);
-  if (!lastSample) return null;
-  const item = simulationRun.items.find(({ id }) => id === trajectory.id);
-  const finalStatus = item?.finalStatus ?? lastSample.status;
-
-  const events: StorySimulationSummary["events"] = [
-    { elapsed_hours: 0, type: "released", location: "the ocean" },
-  ];
-  let previousStatus = trajectory.samples[0]?.status ?? "floating";
-
-  trajectory.samples.slice(1).forEach((sample) => {
-    if (sample.status === previousStatus) return;
-    events.push({
-      elapsed_hours: sample.timeSeconds / 3600,
-      type: sample.status === "outside" ? "outside_domain" : sample.status,
-    });
-    previousStatus = sample.status;
-  });
-
-  if (events.length === 1) {
-    events.push({
-      elapsed_hours: simulationRun.totalSeconds / 3600,
-      type: "still_floating",
-    });
-  }
-
-  return {
-    simulation_id: simulationRun.runId,
-    litter_type: `plastic_${trajectory.type}`,
-    particle_id: trajectory.id,
-    duration_hours: simulationRun.totalSeconds / 3600,
-    events,
-    final_status: finalStatus === "outside" ? "outside_domain" : finalStatus,
-    assumptions: [
-      "This path follows ocean current data",
-      ...simulationRun.attribution.limitations,
-    ],
-  };
-}
-
 function isAbortError(error: unknown) {
   return error instanceof DOMException && error.name === "AbortError";
 }
@@ -159,13 +110,10 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     () => interpolateFrame(trajectories, timeSeconds),
     [trajectories, timeSeconds],
   );
-  const storySummary = useMemo(
-    () => buildStorySummary(simulationRun, selectedParticleId),
-    [simulationRun, selectedParticleId],
-  );
+  const selectedTrajectory = trajectories.find(({ id }) => id === selectedParticleId) ?? trajectories[0];
   const storySignature = useMemo(
-    () => (storySummary ? JSON.stringify(storySummary) : null),
-    [storySummary],
+    () => (simulationRun && selectedTrajectory ? `${simulationRun.runId}:${selectedTrajectory.id}` : null),
+    [simulationRun, selectedTrajectory],
   );
   const displayedMessage = isNarrating && narrationLines.length > 0
     ? narrationLines[narrationLineIndex]
@@ -329,7 +277,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       return;
     }
 
-    if (!storySummary || !storySignature) {
+    if (!simulationRun || !selectedTrajectory || !storySignature) {
       setIsPlaying(true);
       return;
     }
@@ -340,7 +288,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     setMessage("Shelly is getting your ocean story ready...");
 
     try {
-      const story = await requestOceanStory(storySummary);
+      const story = await requestStoryForRun(simulationRun.runId, selectedTrajectory.id);
       if (playbackRequestRef.current !== requestId) return;
       const narration = await requestStoryAudio(story.story_id);
       if (playbackRequestRef.current !== requestId) return;

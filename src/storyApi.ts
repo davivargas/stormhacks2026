@@ -69,6 +69,18 @@ export async function requestOceanStory(
   return parseResponse<OceanStory>(response);
 }
 
+export async function requestStoryForRun(
+  runId: string,
+  particleId: string,
+): Promise<OceanStory> {
+  const response = await fetch(`${API_BASE_URL}/api/runs/${encodeURIComponent(runId)}/stories`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ particle_id: particleId }),
+  });
+  return parseResponse<OceanStory>(response);
+}
+
 export async function requestStoryAudio(storyId: string): Promise<StoryAudio> {
   const response = await fetch(`${API_BASE_URL}/api/stories/${encodeURIComponent(storyId)}/audio`, {
     method: "POST",

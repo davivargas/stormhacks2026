@@ -19,12 +19,61 @@ class FinalStatus(str, Enum):
     missing_data = "missing_data"
 
 
+class Coordinate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    lon: float = Field(ge=-180, le=180)
+    lat: float = Field(ge=-90, le=90)
+
+
+class PlaceContext(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    coordinates: Coordinate
+    label: str = Field(min_length=1, max_length=120)
+    ocean: str | None = Field(default=None, min_length=1, max_length=80)
+    sea: str | None = Field(default=None, min_length=1, max_length=80)
+    country: str | None = Field(default=None, min_length=1, max_length=80)
+    coast: str | None = Field(default=None, min_length=1, max_length=120)
+
+    @field_validator("label", "ocean", "sea", "country", "coast")
+    @classmethod
+    def reject_control_characters(cls, value: str | None) -> str | None:
+        if value is not None and any(ord(character) < 32 for character in value):
+            raise ValueError("place text cannot contain control characters")
+        return value
+
+
+class RouteGeography(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    start: PlaceContext
+    end: PlaceContext
+    traversed_regions: list[str] = Field(default_factory=list, max_length=12)
+    landfall: PlaceContext | None = None
+
+    @field_validator("traversed_regions")
+    @classmethod
+    def validate_regions(cls, values: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        for value in values:
+            value = value.strip()
+            if not value or len(value) > 120:
+                raise ValueError("regions must be between 1 and 120 characters")
+            if any(ord(character) < 32 for character in value):
+                raise ValueError("regions cannot contain control characters")
+            if value not in cleaned:
+                cleaned.append(value)
+        return cleaned
+
+
 class SimulationEvent(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     elapsed_hours: float = Field(ge=0, le=8760)
     type: str = Field(pattern=SAFE_SLUG)
     location: str | None = Field(default=None, min_length=1, max_length=120)
+    coordinates: Coordinate | None = None
 
     @field_validator("location")
     @classmethod
@@ -44,6 +93,7 @@ class SimulationSummary(BaseModel):
     events: list[SimulationEvent] = Field(min_length=1, max_length=20)
     final_status: FinalStatus
     assumptions: list[str] = Field(default_factory=list, max_length=20)
+    geography: RouteGeography | None = None
 
     @field_validator("assumptions")
     @classmethod
@@ -127,3 +177,9 @@ class AudioResponse(BaseModel):
     voice_id: str
     model_id: str
     cached: bool
+
+
+class StoryForRunRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    particle_id: str = Field(pattern=SAFE_ID)
