@@ -47,7 +47,7 @@ function App() {
   const [placements, setPlacements] = useState<Placement[]>(INITIAL_PLACEMENTS);
   const [tool, setTool] = useState<Tool>("explore");
   const [comparison, setComparison] = useState<ComparisonMode>("with");
-  const [timeSeconds, setTimeSeconds] = useState(6 * 3600);
+  const [timeSeconds, setTimeSeconds] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [message, setMessage] = useState("Place some litter, then press play!");
   const lastFrameRef = useRef<number | null>(null);
@@ -130,9 +130,9 @@ function App() {
 
       <div className="map-overlay">
         <header className="topbar">
-          <a className="brand" href="#top" aria-label="PlasticPaths home">
+          <a className="brand" href="#top" aria-label="LitterVoyage home">
             <span className="brand-mark"><Waves size={27} /></span>
-            <span>Plastic<span>Paths</span></span>
+            <span>Litter<span>Voyage</span></span>
           </a>
           <nav className="journey" aria-label="Experiment progress">
             <span className="journey-step journey-step--done">1</span>

@@ -33,12 +33,7 @@ export const PLAYABLE_WATER: Feature<Polygon> = {
   },
 };
 
-export const INITIAL_PLACEMENTS: Placement[] = [
-  { id: "bottle-1", type: "bottle", coordinates: [-123.48, 49.27], placedAtSeconds: 0 },
-  { id: "bag-1", type: "bag", coordinates: [-123.48, 49.4], placedAtSeconds: 0 },
-  { id: "foam-1", type: "foam", coordinates: [-123.58, 49.5], placedAtSeconds: 0 },
-  { id: "collector-1", type: "collector", coordinates: [-123.31, 49.235], placedAtSeconds: 0 },
-];
+export const INITIAL_PLACEMENTS: Placement[] = [];
 
 const movement: Record<string, { east: number; north: number; curve: number }> = {
   bottle: { east: 0.029, north: -0.005, curve: 0.012 },
