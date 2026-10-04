@@ -528,7 +528,8 @@ input:focus-visible {
 .guide-bubble {
   position: absolute;
   left: 18px;
-  bottom: 184px;
+  top: 540px;
+  bottom: auto;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -801,6 +802,7 @@ input:focus-visible {
 
   .guide-bubble {
     left: 12px;
+    top: auto;
     bottom: 206px;
     width: min(260px, calc(100vw - 24px));
     max-width: min(260px, calc(100vw - 24px));
