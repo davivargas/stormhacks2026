@@ -416,7 +416,7 @@ input:focus-visible {
 }
 
 .panel-heading h1 {
-  margin: 1px 0 9px;
+  margin: 1px 0 13px;
   font-family: "Baloo 2", sans-serif;
   font-size: 1.35rem;
   line-height: 1.15;
@@ -432,8 +432,8 @@ input:focus-visible {
   align-items: center;
   gap: 9px;
   width: 100%;
-  min-height: 38px;
-  padding: 2px 9px;
+  min-height: 42px;
+  padding: 3px 9px;
   border: 2px solid transparent;
   border-radius: 17px;
   background: transparent;
@@ -471,9 +471,9 @@ input:focus-visible {
 
 .tool-icon {
   display: grid;
-  flex: 0 0 31px;
-  width: 31px;
-  height: 31px;
+  flex: 0 0 35px;
+  width: 35px;
+  height: 35px;
   place-items: center;
   border-radius: 13px;
   color: #173b50;
@@ -487,44 +487,6 @@ input:focus-visible {
 .tool-icon--narrate { background: #ece4ff; color: #6b4fc4; }
 .tool-icon--remove { background: #e8edf0; color: #526b78; }
 .tool-icon--reset { background: #ffe3dc; color: #c4492f; }
-
-.current-key {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  margin-top: 8px;
-  padding-top: 9px;
-  border-top: 2px solid #eef4f5;
-}
-
-.current-key > span {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  border-radius: 50%;
-  color: #137e96;
-  background: #ddf5f7;
-  font-size: 1.35rem;
-  font-weight: 900;
-}
-
-.current-key p,
-.current-key strong {
-  display: block;
-  margin: 0;
-}
-
-.current-key p {
-  color: #78909c;
-  font-size: 0.66rem;
-  font-weight: 700;
-}
-
-.current-key strong {
-  color: #173b50;
-  font-size: 0.75rem;
-}
 
 .guide-bubble {
   position: absolute;
@@ -757,13 +719,12 @@ input:focus-visible {
     border-radius: 20px;
   }
 
-  .panel-heading,
-  .current-key {
+  .panel-heading {
     display: none;
   }
 
   .tool-grid {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 5px;
   }
 

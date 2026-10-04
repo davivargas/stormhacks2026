@@ -465,7 +465,6 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
               <span><strong>Reset all</strong><small>Clear the map</small></span>
             </motion.button>
           </div>
-          <div className="current-key"><span>↗</span><p><strong>Ocean current</strong>Arrows show water direction</p></div>
         </motion.aside>
 
         <motion.section className={`guide-bubble ${isNarrating ? "guide-bubble--talking guide-bubble--speech" : ""}`} aria-live="polite" initial={{ opacity: 0, y: 22, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.5, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}>
