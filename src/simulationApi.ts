@@ -1,4 +1,5 @@
 import type { Coordinates, LitterType, ParticleStatus, ParticleTrajectory, Placement } from "./types";
+import { placementTime, SECONDS_PER_DAY } from "./timeline";
 
 export interface SimulationPlacement {
   id: string;
@@ -89,11 +90,15 @@ export async function requestSimulation(
         id: placement.id,
         type: placement.type,
         coordinates: placement.coordinates,
-        placedAtSeconds: Math.round(placement.placedAtSeconds),
+        placedAtSeconds: placementTime(placement.placedAtSeconds, options.durationDays * SECONDS_PER_DAY),
       })),
       durationDays: options.durationDays,
       honourCollectors: options.honourCollectors,
     } satisfies SimulateRequest),
   });
-  return parseResponse<SimulateResponse>(response);
+  const run = await parseResponse<SimulateResponse>(response);
+  if (run.durationDays !== options.durationDays || run.totalSeconds !== options.durationDays * SECONDS_PER_DAY) {
+    throw new Error("The backend returned a different experiment duration. Please retry the simulation.");
+  }
+  return run;
 }

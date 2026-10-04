@@ -7,8 +7,9 @@ import type {
   ParticleTrajectory,
   Placement,
 } from "./types";
+import { DEFAULT_DURATION_SECONDS } from "./timeline";
 
-export const DURATION_SECONDS = 24 * 60 * 60;
+export const DURATION_SECONDS = DEFAULT_DURATION_SECONDS;
 
 export const INITIAL_PLACEMENTS: Placement[] = [];
 
@@ -65,6 +66,7 @@ export function interpolateFrame(
   timeSeconds: number,
 ): ParticleFrame[] {
   return trajectories.flatMap((trajectory) => {
+    if (!trajectory.samples.length) return [];
     if (timeSeconds < trajectory.samples[0].timeSeconds) return [];
 
     const nextIndex = trajectory.samples.findIndex((sample) => sample.timeSeconds >= timeSeconds);
@@ -73,15 +75,15 @@ export function interpolateFrame(
     const lower = trajectory.samples[lowerIndex];
     const upper = trajectory.samples[upperIndex];
     const duration = upper.timeSeconds - lower.timeSeconds;
-    const progress = duration === 0 ? 0 : (timeSeconds - lower.timeSeconds) / duration;
+    const progress = duration === 0 ? 0 : Math.min(1, Math.max(0, (timeSeconds - lower.timeSeconds) / duration));
     const status = timeSeconds >= upper.timeSeconds ? upper.status : lower.status;
 
     return {
       id: trajectory.id,
       type: trajectory.type,
       coordinates: [
-        lower.coordinates[0] + (upper.coordinates[0] - lower.coordinates[0]) * progress,
-        lower.coordinates[1] + (upper.coordinates[1] - lower.coordinates[1]) * progress,
+        lower.coordinates[0] + (lower.status === "floating" ? (upper.coordinates[0] - lower.coordinates[0]) * progress : 0),
+        lower.coordinates[1] + (lower.status === "floating" ? (upper.coordinates[1] - lower.coordinates[1]) * progress : 0),
       ],
       status,
     };

@@ -122,16 +122,19 @@ function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames:
       type: "line",
       source: "trails",
       layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "#ffffff", "line-width": 8, "line-opacity": 0.72 },
+      paint: { "line-color": "#173b50", "line-width": 8, "line-opacity": 0.65 },
     });
+  }
+  if (!map.getLayer("trail-line")) {
     map.addLayer({
       id: "trail-line",
       type: "line",
       source: "trails",
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
-        "line-color": ["match", ["get", "type"], "bottle", "#18a77b", "bag", "#ef668a", "#e6a92f"],
-        "line-width": 4,
+        "line-color": "#ffffff",
+        "line-width": 5,
+        "line-opacity": 1,
       },
     });
   }
@@ -300,7 +303,9 @@ export function OceanMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map?.isStyleLoaded()) return;
+    // Tile loading can make isStyleLoaded() false even when these sources
+    // already exist. Do not lose playback updates while panning or zooming.
+    if (!map) return;
     const updates: Array<[string, GeoJSON.GeoJSON]> = [
       ["trails", trailGeoJson(trajectories, timeSeconds)],
       ["particles", particleGeoJson(frames)],

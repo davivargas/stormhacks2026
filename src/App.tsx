@@ -23,9 +23,15 @@ import {
   interpolateFrame,
 } from "./simulation";
 import type { ComparisonMode, Coordinates, ParticleStatus, Placement, Tool } from "./types";
-
-const SIMULATION_DURATION_DAYS = 1;
-const DEFAULT_DURATION_SECONDS = SIMULATION_DURATION_DAYS * 24 * 60 * 60;
+import {
+  audioTimeToTimeline,
+  clampTimelineTime,
+  DEFAULT_DURATION_SECONDS,
+  formatTime,
+  placementTime,
+  SIMULATION_DURATION_DAYS,
+  timelineTimeToAudio,
+} from "./timeline";
 
 const tools: Array<{ id: Tool; label: string; detail: string; icon: typeof CupSoda }> = [
   { id: "bottle", label: "Bottle", detail: "Place in water", icon: CupSoda },
@@ -46,12 +52,6 @@ const goalCardVariants = {
   hidden: { opacity: 0, y: 14 },
   visible: { opacity: 1, y: 0 },
 };
-
-function formatTime(seconds: number) {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
-}
 
 function splitNarrationLines(script: string) {
   return script.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g)?.map((line) => line.trim()).filter(Boolean) ?? [script];
@@ -156,8 +156,9 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       signal: controller.signal,
     })
       .then((run) => {
+        if (controller.signal.aborted) return;
         setSimulationRun(run);
-        setTimeSeconds((current) => Math.min(current, run.totalSeconds));
+        setTimeSeconds((current) => clampTimelineTime(current, run.totalSeconds));
       })
       .catch((error) => {
         if (isAbortError(error)) return;
@@ -318,7 +319,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       audio.ontimeupdate = () => {
         if (Number.isFinite(audio.duration) && audio.duration > 0) {
           setNarrationLineIndex(getNarrationLineIndex(lines, audio.currentTime / audio.duration));
-          setTimeSeconds((audio.currentTime / audio.duration) * durationSeconds);
+          setTimeSeconds(audioTimeToTimeline(audio.currentTime, audio.duration, durationSeconds));
         }
       };
       audioRef.current = audio;
@@ -336,7 +337,10 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
 
   const placeItem = (coordinates: Coordinates) => {
     if (tool === "explore" || tool === "remove") return;
-    const item: Placement = { id: `${tool}-${crypto.randomUUID()}`, type: tool, coordinates, placedAtSeconds: timeSeconds };
+    stopPlayback();
+    const placedAtSeconds = placementTime(timeSeconds, durationSeconds);
+    setTimeSeconds(placedAtSeconds);
+    const item: Placement = { id: `${tool}-${crypto.randomUUID()}`, type: tool, coordinates, placedAtSeconds };
     setPlacements((current) => [...current, item]);
     if (item.type === "collector") {
       setMessage("Great cleanup spot! Running the ocean simulation again...");
@@ -463,13 +467,17 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
                 style={{ "--progress": `${durationSeconds > 0 ? (timeSeconds / durationSeconds) * 100 : 0}%` } as React.CSSProperties}
                 onChange={(event) => {
                   stopPlayback();
-                  const nextTime = Number(event.target.value);
+                  const nextTime = clampTimelineTime(Number(event.target.value), durationSeconds);
                   setTimeSeconds(nextTime);
                   if (audioRef.current && Number.isFinite(audioRef.current.duration)) {
-                    audioRef.current.currentTime = (nextTime / durationSeconds) * audioRef.current.duration;
+                    audioRef.current.currentTime = timelineTimeToAudio(nextTime, durationSeconds, audioRef.current.duration);
                   }
                 }}
               />
+              <div className="timeline-endpoints" aria-hidden="true">
+                <span>Start · 0 days</span>
+                <span>End · {durationSeconds / (24 * 60 * 60)} days</span>
+              </div>
             </div>
             {/* Comparison control temporarily hidden while the single cleanup mode is refined.
             <div className="comparison-control" role="group" aria-label="Compare cleanup results">
@@ -576,20 +584,25 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
                   <p>Place a bottle, bag, or foam item on the water. The map displays its marker, simulated trail, current direction, and any cleanup area you add.</p>
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
-                  <strong>How the local model works</strong>
-                  <p>The current frontend uses predefined current-like paths over a 24-hour timeline. Positions are sampled every two hours, and placement time determines when each item begins moving.</p>
+                  <strong>How the ten-day model works</strong>
+                  <p>The backend calculates a ten-day experiment using ocean-current data. Positions are recorded hourly, with additional samples at placement and terminal events. An item placed on day three begins there and moves only through the remaining seven days.</p>
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
                   <strong>Statuses and cleanup</strong>
-                  <p>Litter may remain floating, become beached, move outside the modeled area, or be captured. Cleanup zones use a 7 km radius, and the comparison controls show outcomes with or without cleanup.</p>
+                  <p>Litter may remain floating, become beached, move outside the modeled area, or be captured. Collectors become active when placed and use the backend's configured capture radius{simulationRun?.collectors[0] ? ` (${simulationRun.collectors[0].radiusM / 1000} km for this run)` : ""}.</p>
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
                   <strong>Model assumptions</strong>
-                  <p>The educational story considers ocean currents only. Wind and waves are excluded, and plastic does not sink or break down during the simulation.</p>
+                  <p>Each area uses one frozen current snapshot throughout the experiment, with wave drift included when available. Tides, wind, sinking, and decomposition are not modeled. Ten simulated days are an educational experiment, not a changing ten-day forecast.</p>
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
                   <strong>Data sources and limitations</strong>
-                  <p>The project backend supports Copernicus Marine currents, synthetic fallback currents, caching, and persistence. The current visible UI primarily uses its local deterministic model, so this is not a live forecast or a precise prediction of real-world drift.</p>
+                  <p>{simulationRun ? simulationRun.attribution.source : "The backend uses Copernicus Marine currents when available and explicitly records synthetic fallback data when real data is unavailable."} This is not a validated real-world drift prediction.</p>
+                  {simulationRun && <>
+                    <p>Dataset: {simulationRun.attribution.dataset}</p>
+                    <ul>{simulationRun.snapshots.map((snapshot) => <li key={snapshot.snapshotId}>{snapshot.source} · {new Date(snapshot.sliceTime).toLocaleString()}</li>)}</ul>
+                    <ul>{simulationRun.attribution.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}</ul>
+                  </>}
                 </motion.article>
               </div>
               <p className="help-footer">Use the simulation to build intuition, compare choices, and learn why preventing litter at its source matters.</p>
