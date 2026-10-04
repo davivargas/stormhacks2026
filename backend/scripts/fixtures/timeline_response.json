@@ -1,0 +1,1189 @@
+{
+  "runId": "fixture-run-simulate",
+  "bucketSeconds": 3600,
+  "buckets": [
+    {
+      "timeSeconds": 0,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 3600,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 7200,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 10800,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 14400,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 18000,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 21600,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 25200,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 28800,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 32400,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 36000,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 39600,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 43200,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 46800,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 50400,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 54000,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 57600,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 61200,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 64800,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 68400,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 72000,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 75600,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 79200,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 82800,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 86400,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 90000,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 93600,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 97200,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 100800,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 104400,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 108000,
+      "floating": 4,
+      "captured": 0,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 111600,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 115200,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 118800,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 122400,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 126000,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 129600,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 133200,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 136800,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 140400,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 144000,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 147600,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 151200,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 154800,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 158400,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 162000,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 165600,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 169200,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 172800,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 176400,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 180000,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 183600,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 187200,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 190800,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 194400,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 198000,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 201600,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 205200,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 208800,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 212400,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 216000,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 219600,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 223200,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 226800,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 230400,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 234000,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 237600,
+      "floating": 3,
+      "captured": 1,
+      "beached": 0,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 241200,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 244800,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 248400,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 252000,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 255600,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 259200,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 262800,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 266400,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 270000,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 273600,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 277200,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 280800,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 284400,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 288000,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 291600,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 295200,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 298800,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 302400,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 306000,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 309600,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 313200,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 316800,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 320400,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 324000,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 327600,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 331200,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 334800,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 338400,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 342000,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 345600,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 349200,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 352800,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 356400,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 360000,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 363600,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 367200,
+      "floating": 2,
+      "captured": 1,
+      "beached": 1,
+      "outside": 0
+    },
+    {
+      "timeSeconds": 370800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 374400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 378000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 381600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 385200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 388800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 392400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 396000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 399600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 403200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 406800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 410400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 414000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 417600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 421200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 424800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 428400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 432000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 435600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 439200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 442800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 446400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 450000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 453600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 457200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 460800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 464400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 468000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 471600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 475200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 478800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 482400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 486000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 489600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 493200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 496800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 500400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 504000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 507600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 511200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 514800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 518400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 522000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 525600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 529200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 532800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 536400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 540000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 543600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 547200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 550800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 554400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 558000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 561600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 565200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 568800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 572400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 576000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 579600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 583200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 586800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 590400,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 594000,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 597600,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 601200,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    },
+    {
+      "timeSeconds": 604800,
+      "floating": 1,
+      "captured": 1,
+      "beached": 1,
+      "outside": 1
+    }
+  ]
+}
