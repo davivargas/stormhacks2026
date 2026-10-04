@@ -15,7 +15,7 @@ import {
   Waves,
 } from "lucide-react";
 import { OceanMap } from "./OceanMap";
-import { requestSimulation } from "./simulationApi";
+import { requestSimulation, SimulationApiError } from "./simulationApi";
 import type { SimulateResponse } from "./simulationApi";
 import { requestStoryAudio, requestStoryForRun } from "./storyApi";
 import {
@@ -161,7 +161,15 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
         setTimeSeconds((current) => clampTimelineTime(current, run.totalSeconds));
       })
       .catch((error) => {
-        if (isAbortError(error)) return;
+        if (controller.signal.aborted || isAbortError(error)) return;
+        if (error instanceof SimulationApiError && error.code === "on_land" && error.placementId) {
+          const rejectedId = error.placementId;
+          setPlacements((current) => current.filter(({ id }) => id !== rejectedId));
+          setSelectedParticleId((current) => current === rejectedId ? null : current);
+          setSimulationError(null);
+          setMessage("That spot is too close to land for the ocean model. Try farther offshore.");
+          return;
+        }
         const detail = error instanceof Error ? error.message : "Could not run the ocean simulation.";
         setSimulationRun(null);
         setSimulationError(detail);
@@ -343,10 +351,10 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     const item: Placement = { id: `${tool}-${crypto.randomUUID()}`, type: tool, coordinates, placedAtSeconds };
     setPlacements((current) => [...current, item]);
     if (item.type === "collector") {
-      setMessage("Great cleanup spot! Running the ocean simulation again...");
+      setMessage("Checking that cleanup spot with the ocean model...");
     } else {
       setSelectedParticleId(item.id);
-      setMessage(`${item.type[0].toUpperCase()}${item.type.slice(1)} selected! Running the ocean simulation...`);
+      setMessage(`${item.type[0].toUpperCase()}${item.type.slice(1)} selected! Checking ocean placement...`);
     }
   };
 

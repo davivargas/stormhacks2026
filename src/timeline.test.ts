@@ -9,7 +9,7 @@ import {
   timelineTimeToAudio,
 } from "./timeline";
 import { impactEventsBetween, interpolateFrame, trailGeoJson } from "./simulation";
-import { requestSimulation } from "./simulationApi";
+import { requestSimulation, SimulationApiError } from "./simulationApi";
 import type { ParticleTrajectory } from "./types";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -79,5 +79,20 @@ describe("ten-day timeline", () => {
   it("rejects a backend response whose duration does not match the request", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ durationDays: 1, totalSeconds: 86400 }))));
     await expect(requestSimulation([], { durationDays: 10, honourCollectors: true })).rejects.toThrow("different experiment duration");
+  });
+
+  it("preserves the rejected placement id from backend validation errors", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      code: "on_land",
+      message: "That spot is land. Try the water!",
+      placementId: "bottle-near-shore",
+    }), { status: 422, headers: { "Content-Type": "application/json" } })));
+
+    await expect(requestSimulation([], { durationDays: 10, honourCollectors: true })).rejects.toMatchObject({
+      name: "SimulationApiError",
+      status: 422,
+      code: "on_land",
+      placementId: "bottle-near-shore",
+    } satisfies Partial<SimulationApiError>);
   });
 });

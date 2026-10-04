@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { requestSimulation } from "./simulationApi";
+import { requestSimulation, SimulationApiError } from "./simulationApi";
 import { requestStoryAudio, requestStoryForRun } from "./storyApi";
 import type { Coordinates } from "./types";
 
@@ -12,7 +12,10 @@ vi.mock("./OceanMap", () => ({
     <output data-testid="frames">{JSON.stringify(frames)}</output>
   </>,
 }));
-vi.mock("./simulationApi", () => ({ requestSimulation: vi.fn() }));
+vi.mock("./simulationApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./simulationApi")>();
+  return { ...actual, requestSimulation: vi.fn() };
+});
 vi.mock("./storyApi", () => ({ requestStoryForRun: vi.fn(), requestStoryAudio: vi.fn() }));
 
 class FakeAudio {
@@ -110,5 +113,27 @@ describe("ten-day timeline UI", () => {
     fireEvent.click(screen.getByRole("button", { name: "Restart experiment" }));
     expect(audio.currentTime).toBe(0);
     expect(slider.value).toBe("0");
+  });
+
+  it("removes a rejected land placement so the next water placement can run", async () => {
+    let rejectedId = "";
+    vi.mocked(requestSimulation).mockImplementationOnce(async (placements) => {
+      rejectedId = placements[0].id;
+      throw new SimulationApiError("That spot is land. Try the water!", 422, "on_land", rejectedId);
+    });
+
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /Bottle/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Drop at test ocean point" }));
+
+    await screen.findByText("That spot is too close to land for the ocean model. Try farther offshore.");
+    expect(requestSimulation).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Drop at test ocean point" }));
+    await waitFor(() => expect(requestSimulation).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(requestSimulation).mock.calls[1][0]).toHaveLength(1);
+    expect(vi.mocked(requestSimulation).mock.calls[1][0][0]).toMatchObject({ coordinates: [-130, 40] });
+    expect(vi.mocked(requestSimulation).mock.calls[1][0][0].id).not.toBe(rejectedId);
+    await waitFor(() => expect(screen.getByTestId("frames").textContent).not.toBe("[]"));
   });
 });

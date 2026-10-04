@@ -66,13 +66,32 @@ export interface SimulateResponse {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
+export class SimulationApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+    readonly placementId?: string,
+  ) {
+    super(message);
+    this.name = "SimulationApiError";
+  }
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as {
+      code?: string;
       detail?: string;
       message?: string;
+      placementId?: string;
     } | null;
-    throw new Error(body?.message ?? body?.detail ?? `LitterVoyage API request failed (${response.status})`);
+    throw new SimulationApiError(
+      body?.message ?? body?.detail ?? `LitterVoyage API request failed (${response.status})`,
+      response.status,
+      body?.code,
+      body?.placementId,
+    );
   }
   return response.json() as Promise<T>;
 }
