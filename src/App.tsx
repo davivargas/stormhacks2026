@@ -3,8 +3,6 @@ import {
   Anchor,
   Backpack,
   CupSoda,
-  ChevronRight,
-  CircleHelp,
   Eraser,
   Info,
   Pause,
@@ -134,15 +132,6 @@ function App() {
             <span className="brand-mark"><Waves size={27} /></span>
             <span>Litter<span>Voyage</span></span>
           </a>
-          <nav className="journey" aria-label="Experiment progress">
-            <span className="journey-step journey-step--done">1</span>
-            <span>Place</span><ChevronRight size={16} />
-            <span className="journey-step">2</span>
-            <span>Predict</span><ChevronRight size={16} />
-            <span className="journey-step">3</span>
-            <span>Explore</span>
-          </nav>
-          <button className="icon-button" type="button" aria-label="Open help"><CircleHelp size={22} /></button>
         </header>
 
         <aside className="tool-panel" aria-label="Map tools">
