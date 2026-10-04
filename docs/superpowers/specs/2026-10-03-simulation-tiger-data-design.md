@@ -109,7 +109,7 @@ RK2 midpoint is a two-line upgrade if trails look jagged. Not in the MVP.
 | captured | distance to any collection point <= radius (haversine) | yes |
 | outside | position leaves the item's snapshot box | yes |
 
-The four names match the frontend's `ParticleStatus` type in `src/types.ts`. Captured records which collector. Checks run every integration step in the order beached, captured, outside.
+The four names match the frontend's `ParticleStatus` type in `src/types.ts`. Captured records which collector. Checks run every integration step in the order outside, beached, captured; outside goes first so a position beyond the box is never read as a clipped land cell.
 
 **Determinism.** No randomness anywhere. Same items plus same snapshots give the same frames. The before/after comparison therefore uses identical environmental inputs by construction.
 
@@ -241,7 +241,7 @@ CREATE TABLE run_collection_points (
 
 -- one row per item per recorded frame
 CREATE TABLE positions (
-  time    TIMESTAMPTZ NOT NULL,              -- run created_at + timeSeconds
+  time    TIMESTAMPTZ NOT NULL,              -- run start_time (the slice hour) + timeSeconds
   run_id  UUID NOT NULL,
   item_id TEXT NOT NULL,
   lon DOUBLE PRECISION NOT NULL, lat DOUBLE PRECISION NOT NULL,
