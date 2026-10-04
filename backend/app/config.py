@@ -36,7 +36,7 @@ DRIFT_FACTOR = {"bottle": 1.0, "bag": 1.0, "foam": 1.0}
 
 # Copernicus.
 COPERNICUS_DATASET_ID = "cmems_mod_glo_phy_anfc_merged-uv_PT1H-i"
-COPERNICUS_TIMEOUT_S = 20
+COPERNICUS_TIMEOUT_S = 30
 SYNTHETIC_RETRY_S = 60  # a fallback field is reused this long before Copernicus is tried again
 
 # Arrows returned by /currents: roughly this many per side.

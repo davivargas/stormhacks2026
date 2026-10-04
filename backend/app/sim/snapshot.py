@@ -274,7 +274,9 @@ _cache: dict[SnapshotKey, tuple[Field, float | None]] = {}
 # Until this time.monotonic() deadline, Copernicus is skipped: one failure covers every box.
 _copernicus_down_until: float = 0.0
 _lock = threading.Lock()
-_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+_pool = concurrent.futures.ThreadPoolExecutor(max_workers=8)
+# One worker: snapshot saves run in the background, in order.
+_store_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
 
 def _cached(key: SnapshotKey) -> Field | None:
@@ -290,6 +292,9 @@ def _cached(key: SnapshotKey) -> Field | None:
 
 def _remember(key: SnapshotKey, fld: Field, ttl: float | None = None) -> Field:
     with _lock:
+        existing = _cache.get(key)
+        if ttl is not None and existing is not None and existing[1] is None:
+            return existing[0]  # a fallback never replaces a real field
         _cache[key] = (fld, None if ttl is None else time.monotonic() + ttl)
     return fld
 
@@ -312,16 +317,43 @@ def _fetch_with_timeout(key: SnapshotKey) -> Field | None:
         return None
 
 
-def load_field(key: SnapshotKey) -> Field:
-    """Cached field for the key: Copernicus, or a synthetic gyre if that fails.
+def _load_stored(key: SnapshotKey) -> Field | None:
+    from app import db  # lazy: db imports this module
 
+    if not db.available():
+        return None
+    try:
+        return db.load_snapshot(key)
+    except Exception:
+        log.warning("snapshot lookup failed for %s", key, exc_info=True)
+        return None
+
+
+def _store(fld: Field) -> None:
+    from app import db  # lazy: db imports this module
+
+    if not db.available():
+        return
+    try:
+        db.save_snapshot(fld)
+    except Exception:
+        log.warning("snapshot save failed for %s", fld.key, exc_info=True)
+
+
+def load_field(key: SnapshotKey) -> Field:
+    """Field for the key: memory, then Tiger, then Copernicus, then a synthetic gyre.
+
+    Real snapshots are stored in Tiger (in the background) and cached for the process.
     A fallback is reused for SYNTHETIC_RETRY_S so one request sees one field per box,
-    then the real source is tried again.
+    then the real sources are tried again. Fallbacks are never stored.
     """
     cached = _cached(key)
     if cached is not None:
         return cached
-    fld = _fetch_with_timeout(key)
+    fld = _load_stored(key)
     if fld is None:
-        return _remember(key, synthetic_field(key), ttl=config.SYNTHETIC_RETRY_S)
+        fld = _fetch_with_timeout(key)
+        if fld is None:
+            return _remember(key, synthetic_field(key), ttl=config.SYNTHETIC_RETRY_S)
+        _store_pool.submit(_store, fld)  # a request does not wait for the COPY
     return _remember(key, fld)

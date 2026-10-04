@@ -154,3 +154,12 @@ def test_cooldown_expires_and_other_boxes_are_fetched_again(monkeypatch):
     assert load_field(KEY).source == "synthetic"
     assert load_field(make_key(50.0, 10.0, 1, T0)).source == "synthetic"
     assert len(calls) == 2
+
+
+def test_fallback_does_not_replace_a_real_cached_field():
+    real = synthetic_field(KEY, uniform=(0.2, 0.0))
+    real.source = "copernicus"
+    snapshot._remember(KEY, real)
+    returned = snapshot._remember(KEY, synthetic_field(KEY), ttl=60)
+    assert returned is real
+    assert snapshot._cached(KEY) is real

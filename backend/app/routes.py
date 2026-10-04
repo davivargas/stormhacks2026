@@ -1,15 +1,17 @@
 """The /api endpoints.
 
-Phase 1: runs are kept in an in-process store. Phase 3 swaps it for Tiger Data
-(save_run / load_run / timeline in db.py) without changing response shapes.
+Runs are stored in Tiger Data (db.py) when it is connected, and always kept in an
+in-process store as the fallback.
 """
 
+import logging
 import uuid
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, Query
 
-from app import config
+from app import config, db
 from app.schemas import (
     Attribution,
     CollectorResult,
@@ -38,6 +40,7 @@ router = APIRouter(prefix="/api")
 
 MAX_STORED_RUNS = 200
 _runs: OrderedDict[str, SimulateResponse] = OrderedDict()
+log = logging.getLogger(__name__)
 
 
 class ApiError(Exception):
@@ -65,21 +68,45 @@ def snapshot_info(f: Field) -> SnapshotInfo:
     return SnapshotInfo(snapshot_id=f.snapshot_id, source=f.source, slice_time=f.key.slice_time, n_slices=f.key.n_slices)
 
 
-def _remember(resp: SimulateResponse) -> None:
-    _runs[resp.run_id] = resp
+def _persist(resp: SimulateResponse, req: SimulateRequest, fields: dict[str, Field],
+             parent_run_id: str | None) -> bool:
+    """Store the run in Tiger. A database problem never fails the request."""
+    if not db.available():
+        return False
+    start_time = next(iter(fields.values())).key.slice_time  # one slice time per run
+    try:
+        db.save_run(resp, req, start_time, parent_run_id)
+        return True
+    except Exception:
+        log.warning("run save failed for %s", resp.run_id, exc_info=True)
+        return False
+
+
+def _remember(resp: SimulateResponse, req: SimulateRequest, fields: dict[str, Field],
+              parent_run_id: str | None = None) -> None:
+    resp.persisted = _persist(resp, req, fields, parent_run_id)
+    _runs[resp.run_id] = resp  # memory copy: the fallback when Tiger is down
     while len(_runs) > MAX_STORED_RUNS:
         _runs.popitem(last=False)
 
 
 def load_fields(req: SimulateRequest) -> dict[str, Field]:
-    """One field per litter item (shared when keys match); rejects drops on land."""
+    """One field per litter item (shared when keys match); rejects drops on land.
+
+    Distinct boxes are resolved concurrently; the land check then runs in request order.
+    """
     slice_time = current_slice_time()
+    litter = [p for p in req.placements if p.type != "collector"]
+    keys = {p.id: make_key(*p.coordinates, req.duration_days, slice_time) for p in litter}
+    distinct = list(dict.fromkeys(keys.values()))
+    resolved: dict = {}
+    if distinct:
+        with ThreadPoolExecutor(max_workers=min(8, len(distinct))) as pool:
+            resolved = dict(zip(distinct, pool.map(lambda k: load_field(k), distinct)))
     fields: dict[str, Field] = {}
-    for p in req.placements:
-        if p.type == "collector":
-            continue
+    for p in litter:
+        fld = resolved[keys[p.id]]
         lon, lat = p.coordinates
-        fld = load_field(make_key(lon, lat, req.duration_days, slice_time))
         if fld.is_land(lon, lat):
             raise ApiError(422, "on_land", "That spot is land. Try the water!", p.id)
         fields[p.id] = fld
@@ -87,7 +114,8 @@ def load_fields(req: SimulateRequest) -> dict[str, Field]:
 
 
 def build_response(
-    req: SimulateRequest, fields: dict[str, Field], *, honour_collectors: bool = True
+    req: SimulateRequest, fields: dict[str, Field], *, honour_collectors: bool = True,
+    parent_run_id: str | None = None,
 ) -> SimulateResponse:
     litter = [
         engine.LitterItem(p.id, p.type, *p.coordinates) for p in req.placements if p.type != "collector"
@@ -137,13 +165,13 @@ def build_response(
         attribution=attribution_for(unique_fields),
         persisted=False,
     )
-    _remember(resp)
+    _remember(resp, req, fields, parent_run_id)
     return resp
 
 
 def compare(req: SimulateRequest, fields: dict[str, Field]) -> CompareResponse:
     without = build_response(req, fields, honour_collectors=False)
-    with_ = build_response(req, fields, honour_collectors=True)
+    with_ = build_response(req, fields, honour_collectors=True, parent_run_id=without.run_id)
     w, o = with_.summary, without.summary
     delta = Summary(
         floating=w.floating - o.floating,
@@ -192,7 +220,7 @@ def arrows_of(fld: Field) -> list[CurrentArrow]:
 
 @router.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse(ok=True, db=False)  # phase 3 pings Tiger
+    return HealthResponse(ok=True, db=db.ping())
 
 
 @router.get("/meta", response_model=MetaResponse)
@@ -241,7 +269,17 @@ def compare_endpoint(req: SimulateRequest) -> CompareResponse:
     return compare(req, load_fields(req))
 
 
-def _get_run(run_id: str) -> SimulateResponse:
+def _tiger_run_id(run_id: str) -> str | None:
+    """The canonical UUID string when Tiger can be asked about this id, else None."""
+    if not db.available():
+        return None
+    try:
+        return str(uuid.UUID(run_id))
+    except ValueError:
+        return None
+
+
+def _memory_run(run_id: str) -> SimulateResponse:
     resp = _runs.get(run_id)
     if resp is None:
         raise ApiError(404, "run_not_found", f"No run with id {run_id}")
@@ -250,9 +288,25 @@ def _get_run(run_id: str) -> SimulateResponse:
 
 @router.get("/runs/{run_id}", response_model=SimulateResponse)
 def get_run(run_id: str) -> SimulateResponse:
-    return _get_run(run_id)
+    tiger_id = _tiger_run_id(run_id)
+    if tiger_id is not None:
+        try:
+            stored = db.load_run(tiger_id)
+            if stored is not None:
+                return stored
+        except Exception:
+            log.warning("run load failed for %s, trying memory", run_id, exc_info=True)
+    return _memory_run(run_id)
 
 
 @router.get("/runs/{run_id}/timeline", response_model=TimelineResponse)
 def get_timeline(run_id: str) -> TimelineResponse:
-    return timeline_of(_get_run(run_id))
+    tiger_id = _tiger_run_id(run_id)
+    if tiger_id is not None:
+        try:
+            stored = db.timeline(tiger_id)
+            if stored is not None:
+                return stored
+        except Exception:
+            log.warning("timeline query failed for %s, trying memory", run_id, exc_info=True)
+    return timeline_of(_memory_run(run_id))

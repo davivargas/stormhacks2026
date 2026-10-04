@@ -1,18 +1,27 @@
 """FastAPI app factory. Run with: uvicorn app.main:app --reload (from backend/)."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
-from app import config
+from app import config, db
 from app.routes import ApiError, router
 from app.schemas import ErrorResponse
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db.init_pool()  # returns False and carries on when Tiger is unreachable
+    yield
+    db.close_pool()
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="PlasticPaths simulation API", version="0.1.0")
+    app = FastAPI(title="PlasticPaths simulation API", version="0.1.0", lifespan=lifespan)
     app.add_middleware(CORSMiddleware, allow_origins=config.CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
     app.add_middleware(GZipMiddleware, minimum_size=1000)
 

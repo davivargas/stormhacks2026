@@ -32,7 +32,10 @@ def init_pool() -> bool:
     if not config.DATABASE_URL:
         return False
     try:
-        pool = ConnectionPool(config.DATABASE_URL, min_size=1, max_size=4, open=False, timeout=5)
+        pool = ConnectionPool(
+            config.DATABASE_URL, min_size=1, max_size=4, open=False, timeout=5,
+            check=ConnectionPool.check_connection,  # replace a connection Tiger dropped while idle
+        )
         pool.open(wait=True, timeout=10)
         _pool = pool
         return True
