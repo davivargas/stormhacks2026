@@ -39,3 +39,6 @@ Publish the style and put its `mapbox://styles/...` URL in `VITE_MAPBOX_STYLE_UR
 ## Backend handoff
 
 Replace `buildTrajectories()` with data from the planned FastAPI endpoints. Preserve coordinates as `[longitude, latitude]`, timestamps as elapsed seconds, and the four existing particle statuses.
+
+The isolated story, educational retrieval, and narration API is documented in
+[`backend/README.md`](backend/README.md).
