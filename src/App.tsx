@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Eraser,
   Info,
+  X,
   Pause,
   Play,
   RotateCcw,
@@ -96,6 +97,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   const [isPlaying, setIsPlaying] = useState(false);
   const [isNarrating, setIsNarrating] = useState(false);
   const [isPreparingNarration, setIsPreparingNarration] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [message, setMessage] = useState("Choose a litter type, then click the ocean to place it.");
   const lastFrameRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -157,6 +159,15 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     playbackRequestRef.current += 1;
     detachAudio(audioRef.current);
   }, []);
+
+  useEffect(() => {
+    if (!isHelpOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsHelpOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isHelpOpen]);
 
   useEffect(() => {
     if (trajectories.some(({ id }) => id === selectedParticleId)) return;
@@ -320,7 +331,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
             <span className="brand-mark"><Waves size={27} /></span>
             <span>Litter<span>Voyage</span></span>
           </motion.a>
-          <motion.button className="icon-button" type="button" aria-label="Open help" whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}><CircleHelp size={22} /></motion.button>
+          <motion.button className="icon-button" type="button" aria-label="Open help" aria-expanded={isHelpOpen} onClick={() => setIsHelpOpen(true)} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}><CircleHelp size={22} /></motion.button>
         </motion.header>
 
         <motion.aside className="tool-panel" aria-label="Map tools" initial={{ opacity: 0, x: -28, scale: 0.96 }} animate={{ opacity: 1, x: 0, scale: 1 }} transition={{ duration: 0.55, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}>
@@ -409,6 +420,48 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
 
         <motion.button className="source-button" type="button" whileHover={{ y: -3 }} whileTap={{ scale: 0.96 }}><Info size={15} /> Data & assumptions</motion.button>
       </div>
+
+      {isHelpOpen && (
+        <div className="help-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setIsHelpOpen(false);
+        }}>
+          <motion.section
+            className="help-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="help-title"
+            initial={{ opacity: 0, scale: 0.94, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 360, damping: 28 }}
+          >
+            <button className="help-close" type="button" aria-label="Close help" onClick={() => setIsHelpOpen(false)}>
+              <X size={20} />
+            </button>
+            <span className="eyebrow">About LitterVoyage</span>
+            <h2 id="help-title">Explore how litter reaches the sea</h2>
+            <p>LitterVoyage turns an everyday piece of litter into an interactive ocean journey. Place it on the map, follow the currents, and compare what happens when cleanup is added.</p>
+            <div className="goal-list">
+              <article>
+                <strong>SDG 14 · Life Below Water</strong>
+                <p>Shows how plastic pollution can move through marine environments and why preventing litter at its source matters.</p>
+              </article>
+              <article>
+                <strong>SDG 12 · Responsible Consumption and Production</strong>
+                <p>Connects individual choices, waste disposal, and the path litter can take when it is not managed responsibly.</p>
+              </article>
+              <article>
+                <strong>SDG 6 · Clean Water and Sanitation</strong>
+                <p>Highlights the shared responsibility to keep waterways clean and reduce pollution before it spreads.</p>
+              </article>
+              <article>
+                <strong>SDG 17 · Partnerships for the Goals</strong>
+                <p>Invites people to learn, experiment, and work together on practical solutions for healthier oceans.</p>
+              </article>
+            </div>
+            <p className="help-footer">Small actions add up. Use the map to learn, then help keep litter out of the water.</p>
+          </motion.section>
+        </div>
+      )}
     </main>
   );
 }
