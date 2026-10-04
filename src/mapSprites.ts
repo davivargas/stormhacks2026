@@ -1,6 +1,6 @@
 import type { Map as MapboxMap } from "mapbox-gl";
 
-type SpriteName = "bottle" | "bag" | "foam" | "collector" | "current-arrow";
+type SpriteName = "bottle" | "bag" | "foam" | "collector";
 
 function makeCanvas(name: SpriteName): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
@@ -13,19 +13,6 @@ function makeCanvas(name: SpriteName): HTMLCanvasElement {
   context.lineJoin = "round";
   context.lineWidth = 6;
   context.strokeStyle = "#173b50";
-
-  if (name === "current-arrow") {
-    context.strokeStyle = "#137e96";
-    context.lineWidth = 9;
-    context.beginPath();
-    context.moveTo(48, 80);
-    context.lineTo(48, 20);
-    context.moveTo(27, 42);
-    context.lineTo(48, 20);
-    context.lineTo(69, 42);
-    context.stroke();
-    return canvas;
-  }
 
   if (name === "bottle") {
     context.fillStyle = "#56c596";
@@ -97,7 +84,7 @@ function makeCanvas(name: SpriteName): HTMLCanvasElement {
 }
 
 export function registerMapSprites(map: MapboxMap) {
-  const names: SpriteName[] = ["bottle", "bag", "foam", "collector", "current-arrow"];
+  const names: SpriteName[] = ["bottle", "bag", "foam", "collector"];
   names.forEach((name) => {
     const canvas = makeCanvas(name);
     const context = canvas.getContext("2d");

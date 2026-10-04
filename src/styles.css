@@ -352,44 +352,6 @@ input:focus-visible {
 .tool-icon--collector { background: #d9eeff; color: #2479a7; }
 .tool-icon--remove { background: #e8edf0; color: #526b78; }
 
-.current-key {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  margin-top: 14px;
-  padding-top: 13px;
-  border-top: 2px solid #eef4f5;
-}
-
-.current-key > span {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  border-radius: 50%;
-  color: #137e96;
-  background: #ddf5f7;
-  font-size: 1.35rem;
-  font-weight: 900;
-}
-
-.current-key p,
-.current-key strong {
-  display: block;
-  margin: 0;
-}
-
-.current-key p {
-  color: #78909c;
-  font-size: 0.66rem;
-  font-weight: 700;
-}
-
-.current-key strong {
-  color: #173b50;
-  font-size: 0.75rem;
-}
-
 .guide-bubble {
   position: absolute;
   right: 20px;
@@ -628,8 +590,7 @@ input:focus-visible {
     border-radius: 20px;
   }
 
-  .panel-heading,
-  .current-key {
+  .panel-heading {
     display: none;
   }
 

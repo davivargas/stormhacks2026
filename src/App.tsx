@@ -159,7 +159,6 @@ function App() {
               </button>
             ))}
           </div>
-          <div className="current-key"><span>↗</span><p><strong>Ocean current</strong>Arrows show water direction</p></div>
         </aside>
 
         <section className="guide-bubble" aria-live="polite">

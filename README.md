@@ -28,7 +28,7 @@ Publish the style and put its `mapbox://styles/...` URL in `VITE_MAPBOX_STYLE_UR
 ## Current prototype
 
 - Full-viewport responsive map layout
-- Mapbox GeoJSON sources for particles, trails, current arrows, and cleanup zones
+- Mapbox GeoJSON sources for particles, trails, and cleanup zones
 - Bottle, bag, foam, cleanup, and removal tools
 - Play, pause, restart, and timeline scrubbing
 - With/without cleanup comparison

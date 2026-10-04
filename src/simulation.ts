@@ -146,24 +146,3 @@ export function trailGeoJson(
     }),
   };
 }
-
-export function currentGeoJson(timeSeconds: number): FeatureCollection<Point> {
-  const columns = 6;
-  const rows = 5;
-  const phase = timeSeconds / DURATION_SECONDS;
-  return {
-    type: "FeatureCollection",
-    features: Array.from({ length: columns * rows }, (_, index) => {
-      const column = index % columns;
-      const row = Math.floor(index / columns);
-      return {
-        type: "Feature",
-        properties: { bearing: 72 + Math.sin(index * 0.8 + phase * Math.PI * 2) * 42 },
-        geometry: {
-          type: "Point",
-          coordinates: [-123.66 + column * 0.105, 49.15 + row * 0.095],
-        },
-      };
-    }),
-  };
-}

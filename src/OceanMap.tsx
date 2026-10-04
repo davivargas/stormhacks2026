@@ -6,7 +6,6 @@ import mapboxgl, { type GeoJSONSource, type MapMouseEvent } from "mapbox-gl";
 import { AlertCircle, KeyRound } from "lucide-react";
 import { registerMapSprites } from "./mapSprites";
 import {
-  currentGeoJson,
   particleGeoJson,
   PLAYABLE_WATER,
   REGION_BOUNDS,
@@ -49,7 +48,6 @@ function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames:
 
   const sources: Array<[string, GeoJSON.GeoJSON]> = [
     ["playable-water", PLAYABLE_WATER],
-    ["current-arrows", currentGeoJson(timeSeconds)],
     ["trails", trailGeoJson(trajectories, timeSeconds)],
     ["particles", particleGeoJson(frames)],
     ["collectors", collectorsGeoJson(placements)],
@@ -80,21 +78,6 @@ function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames:
       type: "line",
       source: "collection-areas",
       paint: { "line-color": "#e6a92f", "line-width": 2, "line-dasharray": [2, 2] },
-    });
-  }
-  if (!map.getLayer("current-arrows-layer")) {
-    map.addLayer({
-      id: "current-arrows-layer",
-      type: "symbol",
-      source: "current-arrows",
-      layout: {
-        "icon-image": "current-arrow",
-        "icon-size": 0.34,
-        "icon-rotate": ["get", "bearing"],
-        "icon-allow-overlap": true,
-        "icon-ignore-placement": true,
-      },
-      paint: { "icon-opacity": 0.64 },
     });
   }
   if (!map.getLayer("trail-halo")) {
@@ -229,7 +212,6 @@ export function OceanMap({
     const map = mapRef.current;
     if (!map?.isStyleLoaded()) return;
     const updates: Array<[string, GeoJSON.GeoJSON]> = [
-      ["current-arrows", currentGeoJson(timeSeconds)],
       ["trails", trailGeoJson(trajectories, timeSeconds)],
       ["particles", particleGeoJson(frames)],
       ["collectors", collectorsGeoJson(placements)],
