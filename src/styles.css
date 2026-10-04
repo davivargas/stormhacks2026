@@ -749,7 +749,6 @@ input:focus-visible {
 
 .ocean-page--dark .brand,
 .ocean-page--dark .tool-button strong,
-.ocean-page--dark .current-key strong,
 .ocean-page--dark .timeline label,
 .ocean-page--dark .timeline label strong,
 .ocean-page--dark .guide-bubble p {
@@ -764,13 +763,8 @@ input:focus-visible {
   background: #174e58;
 }
 
-.ocean-page--dark .tool-button small,
-.ocean-page--dark .current-key p {
+.ocean-page--dark .tool-button small {
   color: #9ab1ba;
-}
-
-.ocean-page--dark .current-key {
-  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .ocean-page--dark .source-button {
