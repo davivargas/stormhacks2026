@@ -78,19 +78,19 @@ VITE_API_BASE_URL=http://localhost:8001 npm run dev -- --port 5173 --strictPort
 ```
 
 Placing or removing an item sends a new simulation request with
-`{placements, durationDays: 10, honourCollectors: true}` to `/api/simulate`.
+`{placements, durationDays: 365, honourCollectors: true}` to `/api/simulate`.
 Each placement includes `placedAtSeconds` on the shared experiment timeline;
-the experiment ends at ten days (864,000 seconds). An item placed on day three
-drifts only during the remaining seven days. The slider uses the backend's
-`totalSeconds`, displays days/hours/minutes, and retains five-minute scrubbing.
+the experiment ends at one year (31,536,000 seconds). An item placed partway
+through the year drifts only during the remaining time. The slider uses the backend's
+`totalSeconds`, displays years/days/hours/minutes, and retains five-minute scrubbing.
 Pause, resume, and scrubbing use the downloaded trajectories without additional
 simulation requests. Restart returns playback and narration to the beginning.
 
 The shared frontend duration is defined in `src/timeline.ts`. Without narration,
-ten days play in about 72 real seconds at the current speed. With narration,
+one year plays in about 60 real seconds at the current speed. With narration,
 timeline progress and scrubbing map to the audio's duration. Each area uses one
-frozen current snapshot: this is an educational ten-day experiment, not a
-changing ten-day forecast.
+frozen current snapshot: this is an educational one-year experiment, not a
+year-long forecast.
 
 Backend synthetic-current fallback is explicitly labelled. A failed API request
 never substitutes frontend mock movement. Snapshot source and date, storage

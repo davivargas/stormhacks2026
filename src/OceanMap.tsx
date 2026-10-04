@@ -124,8 +124,14 @@ function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames:
       id: "trail-halo",
       type: "line",
       source: "trails",
+      slot: "top",
       layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "#173b50", "line-width": 8, "line-opacity": 0.65 },
+      paint: {
+        "line-color": "#ffffff",
+        "line-width": 9,
+        "line-opacity": 0.32,
+        "line-emissive-strength": 1,
+      },
     });
   }
   if (!map.getLayer("trail-line")) {
@@ -133,11 +139,13 @@ function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames:
       id: "trail-line",
       type: "line",
       source: "trails",
+      slot: "top",
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
         "line-color": "#ffffff",
         "line-width": 5,
         "line-opacity": 1,
+        "line-emissive-strength": 1,
       },
     });
   }

@@ -126,6 +126,9 @@ def friendly_elapsed_time(hours: float) -> str:
         return f"about {phrase}"
     if hours >= 24 and hours % 24 == 0:
         days = hours / 24
+        if days >= 365 and days % 365 == 0:
+            years = days / 365
+            return f"{_spoken_number(years)} {'year' if years == 1 else 'years'}"
         return f"{_spoken_number(days)} {'day' if days == 1 else 'days'}"
     if hours > 24:
         days = int(hours // 24)

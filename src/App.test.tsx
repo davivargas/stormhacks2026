@@ -42,7 +42,7 @@ beforeEach(() => {
     trajectories: placements.filter((p) => p.type !== "collector").map((p) => ({
       id: p.id, type: p.type as "bottle" | "bag" | "foam", samples: [
         { timeSeconds: p.placedAtSeconds, coordinates: p.coordinates, status: "floating" },
-        { timeSeconds: 864000, coordinates: [-129.9, 40], status: "floating" },
+        { timeSeconds: options.durationDays * 86400, coordinates: [-129.9, 40], status: "floating" },
       ],
     })),
     items: [], collectors: [], summary: { floating: placements.length, captured: 0, beached: 0, outside: 0 },
@@ -52,11 +52,11 @@ beforeEach(() => {
   }));
   vi.mocked(requestStoryForRun).mockResolvedValue({
     story_id: "story", simulation_id: "run-1", particle_id: "bottle", title: "Ocean voyage",
-    script: "A ten-day journey.", sources: [], generation_mode: "fallback", retrieval_mode: "local",
+    script: "A one-year journey.", sources: [], generation_mode: "fallback", retrieval_mode: "local",
   });
   vi.mocked(requestStoryAudio).mockResolvedValue({
     story_id: "story", audio_url: "http://localhost/test.mp3", content_type: "audio/mpeg",
-    script: "A ten-day journey.", voice_id: "voice", model_id: "model", cached: true,
+    script: "A one-year journey.", voice_id: "voice", model_id: "model", cached: true,
   });
   vi.mocked(deleteSessionRuns).mockResolvedValue({ deleted: 1, database: "cleared" });
 });
@@ -70,11 +70,11 @@ afterEach(() => {
   vi.mocked(deleteSessionRuns).mockReset();
 });
 
-describe("ten-day timeline UI", () => {
-  it("requests ten days, places on day three, and restarts at zero", async () => {
+describe("one-year timeline UI", () => {
+  it("requests one year, places on day three, and restarts at zero", async () => {
     render(<App />);
     const slider = screen.getByRole("slider") as HTMLInputElement;
-    expect(slider.max).toBe("864000");
+    expect(slider.max).toBe("31536000");
     expect(slider.step).toBe("300");
     expect(slider.getAttribute("aria-valuetext")).toBe("0d 00h 00m");
     fireEvent.click(screen.getByRole("button", { name: /Bottle/ }));
@@ -82,17 +82,17 @@ describe("ten-day timeline UI", () => {
     fireEvent.click(screen.getByRole("button", { name: "Drop at test ocean point" }));
     await waitFor(() => expect(requestSimulation).toHaveBeenCalledTimes(1));
     expect(vi.mocked(requestSimulation).mock.calls[0][0][0].placedAtSeconds).toBe(259200);
-    expect(vi.mocked(requestSimulation).mock.calls[0][1].durationDays).toBe(10);
+    expect(vi.mocked(requestSimulation).mock.calls[0][1].durationDays).toBe(365);
     await waitFor(() => expect(screen.getByTestId("frames").textContent).not.toBe("[]"));
     fireEvent.change(slider, { target: { value: "172800" } });
     expect(screen.getByTestId("frames").textContent).toBe("[]");
-    fireEvent.change(slider, { target: { value: "864000" } });
-    expect(slider.getAttribute("aria-valuetext")).toBe("10d 00h 00m");
+    fireEvent.change(slider, { target: { value: "31536000" } });
+    expect(slider.getAttribute("aria-valuetext")).toBe("1y 0d 00h 00m");
     fireEvent.click(screen.getByRole("button", { name: "Restart experiment" }));
     expect(slider.value).toBe("0");
   });
 
-  it("maps narration progress and seeking across the complete ten-day run", async () => {
+  it("maps narration progress and seeking across the complete one-year run", async () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: /Bottle/ }));
     fireEvent.click(screen.getByRole("button", { name: "Drop at test ocean point" }));
@@ -102,13 +102,13 @@ describe("ten-day timeline UI", () => {
     const audio = FakeAudio.instances[0];
     const slider = screen.getByRole("slider") as HTMLInputElement;
     act(() => { audio.currentTime = 15; audio.ontimeupdate?.(); });
-    expect(slider.value).toBe("216000");
-    fireEvent.change(slider, { target: { value: "648000" } });
+    expect(slider.value).toBe("7884000");
+    fireEvent.change(slider, { target: { value: "23652000" } });
     expect(audio.currentTime).toBe(45);
     fireEvent.click(screen.getByRole("button", { name: "Play simulation and narration" }));
     act(() => audio.onended?.());
-    expect(slider.value).toBe("864000");
-    expect(slider.getAttribute("aria-valuetext")).toBe("10d 00h 00m");
+    expect(slider.value).toBe("31536000");
+    expect(slider.getAttribute("aria-valuetext")).toBe("1y 0d 00h 00m");
     fireEvent.click(screen.getByRole("button", { name: "Restart experiment" }));
     expect(audio.currentTime).toBe(0);
     expect(slider.value).toBe("0");

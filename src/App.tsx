@@ -30,6 +30,7 @@ import {
   audioTimeToTimeline,
   clampTimelineTime,
   DEFAULT_DURATION_SECONDS,
+  formatDurationLabel,
   formatTime,
   placementTime,
   SIMULATION_DURATION_DAYS,
@@ -232,7 +233,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       const elapsed = timestamp - lastFrameRef.current;
       lastFrameRef.current = timestamp;
       setTimeSeconds((current) => {
-        const next = current + elapsed * 12;
+        const next = current + elapsed * (durationSeconds / 60_000);
         if (next >= durationSeconds) {
           setIsPlaying(false);
           return durationSeconds;
@@ -525,7 +526,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
               />
               <div className="timeline-endpoints" aria-hidden="true">
                 <span>Start · 0 days</span>
-                <span>End · {durationSeconds / (24 * 60 * 60)} days</span>
+                <span>End · {formatDurationLabel(durationSeconds)}</span>
               </div>
             </div>
             {/* Comparison control temporarily hidden while the single cleanup mode is refined.
@@ -633,8 +634,8 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
                   <p>Place a bottle, bag, or foam item on the water. The map displays its marker, simulated trail, current direction, and any cleanup area you add.</p>
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
-                  <strong>How the ten-day model works</strong>
-                  <p>The backend calculates a ten-day experiment using ocean-current data. Positions are recorded hourly, with additional samples at placement and terminal events. An item placed on day three begins there and moves only through the remaining seven days.</p>
+                  <strong>How the one-year model works</strong>
+                  <p>The backend calculates a one-year educational experiment using ocean-current data. Positions are recorded hourly, with additional samples at placement and terminal events. An item begins moving when you place it on the shared timeline.</p>
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
                   <strong>Statuses and cleanup</strong>
@@ -642,7 +643,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
                   <strong>Model assumptions</strong>
-                  <p>Each area uses one frozen current snapshot throughout the experiment, with wave drift included when available. Tides, wind, sinking, and decomposition are not modeled. Ten simulated days are an educational experiment, not a changing ten-day forecast.</p>
+                  <p>Each area uses one frozen current snapshot throughout the experiment, with wave drift included when available. Tides, wind, sinking, and decomposition are not modeled. The simulated year is an educational “what if,” not a year-long forecast.</p>
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
                   <strong>Data sources and limitations</strong>

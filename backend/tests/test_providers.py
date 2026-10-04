@@ -159,6 +159,7 @@ def test_friendly_elapsed_time_uses_days_instead_of_hour_24() -> None:
     assert friendly_elapsed_time(48) == "two days"
     assert friendly_elapsed_time(30) == "one day and six hours"
     assert friendly_elapsed_time(25.77776) == "about one day, one hour, and 45 minutes"
+    assert friendly_elapsed_time(365 * 24) == "one year"
 
 
 async def test_fallback_story_uses_child_friendly_elapsed_time() -> None:

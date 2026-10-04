@@ -47,7 +47,7 @@ def test_on_land_is_422(monkeypatch):
 
 
 def test_bad_duration_is_422():
-    r = client.post("/api/simulate", json={**BODY, "durationDays": 31})
+    r = client.post("/api/simulate", json={**BODY, "durationDays": 366})
     assert r.status_code == 422 and r.json()["code"] == "invalid_request"
 
 
