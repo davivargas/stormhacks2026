@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import circle from "@turf/circle";
 import { featureCollection, point } from "@turf/helpers";
 import mapboxgl, { type GeoJSONSource, type MapMouseEvent } from "mapbox-gl";
@@ -22,19 +22,20 @@ interface OceanMapProps {
 }
 
 const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-const styleUrl = import.meta.env.VITE_MAPBOX_STYLE_URL || "mapbox://styles/mapbox/standard";
+const styleUrl = import.meta.env.VITE_MAPBOX_STYLE_URL || "mapbox://styles/mapbox/light-v11";
 
 function hideBasemapRoads(map: mapboxgl.Map) {
   const style = map.getStyle();
   const roadLayerPattern = /(?:road|motorway|highway|street)/i;
 
   style.layers
-    .filter((layer) => roadLayerPattern.test(layer.id))
+    .filter((layer) => roadLayerPattern.test(layer.id) || layer.type === "fill-extrusion")
     .forEach((layer) => map.setLayoutProperty(layer.id, "visibility", "none"));
 
-  // Mapbox Standard keeps its internal road layers behind an import, so they
-  // must be configured through the import rather than ordinary layer IDs.
+  // Standard's internal layers are exposed through import configuration.
   style.imports?.forEach((styleImport) => {
+    if (!/^mapbox:\/\/styles\/mapbox\/standard(?:-satellite)?$/.test(styleImport.url)) return;
+
     map.setConfigProperty(styleImport.id, "showRoadLabels", false);
     map.setConfigProperty(styleImport.id, "showPedestrianRoads", false);
     map.setConfigProperty(styleImport.id, "showHdRoads", false);
@@ -170,6 +171,7 @@ export function OceanMap({
 }: OceanMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const [mapError, setMapError] = useState(false);
   const toolRef = useRef(tool);
   const onPlaceRef = useRef(onPlace);
   const onRemoveRef = useRef(onRemove);
@@ -210,6 +212,13 @@ export function OceanMap({
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
 
+    const handleMapError = (event: mapboxgl.ErrorEvent) => {
+      if (mapRef.current !== map) return;
+      console.warn("Mapbox could not load the configured map:", event.error.message);
+      map.remove();
+      mapRef.current = null;
+      setMapError(true);
+    };
     const handleStyleLoad = () => {
       const data = mapDataRef.current;
       map.setProjection("mercator");
@@ -243,7 +252,8 @@ export function OceanMap({
         onInvalidPlacementRef.current();
         return;
       }
-      onPlaceRef.current([event.lngLat.lng, event.lngLat.lat]);
+      const coordinates: [number, number] = [event.lngLat.wrap().lng, event.lngLat.lat];
+      onPlaceRef.current(coordinates);
     };
 
     const handleMouseMove = (event: MapMouseEvent) => {
@@ -264,13 +274,16 @@ export function OceanMap({
       }
     };
 
+    map.on("error", handleMapError);
     map.on("style.load", handleStyleLoad);
     map.on("click", handleClick);
     map.on("mousemove", handleMouseMove);
 
     return () => {
-      map.remove();
-      mapRef.current = null;
+      if (mapRef.current === map) {
+        map.remove();
+        mapRef.current = null;
+      }
     };
   }, []);
 
@@ -286,7 +299,7 @@ export function OceanMap({
     updates.forEach(([id, data]) => (map.getSource(id) as GeoJSONSource | undefined)?.setData(data));
   }, [frames, placements, timeSeconds, trajectories]);
 
-  if (!token) {
+  if (!token || mapError) {
     return (
       <div className="map-fallback" aria-label="Decorative ocean map preview">
         <div className="fallback-island fallback-island--one" />
@@ -295,8 +308,12 @@ export function OceanMap({
         <div className="credential-card" role="status">
           <div className="credential-icon"><KeyRound size={22} /></div>
           <div>
-            <strong>Connect your Mapbox map</strong>
-            <span>Add a public token to <code>.env.local</code> to load the interactive Studio style.</span>
+            <strong>{mapError ? "Mapbox preview unavailable" : "Connect your Mapbox map"}</strong>
+            <span>
+              {mapError
+                ? "The Mapbox token was rejected, so you are viewing the built-in ocean preview."
+                : <>Add a public token to <code>.env.local</code> to load the interactive Studio style.</>}
+            </span>
           </div>
         </div>
         <div className="fallback-note"><AlertCircle size={16} /> Preview mode</div>

@@ -217,6 +217,20 @@ input:focus-visible {
   box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.1);
 }
 
+.tool-button {
+  position: relative;
+}
+
+.tool-selection-dot {
+  position: absolute;
+  right: 16px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #16a77c;
+  box-shadow: 0 0 0 4px rgba(22, 167, 124, 0.14);
+}
+
 .tool-panel {
   position: absolute;
   top: 98px;

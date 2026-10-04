@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   Anchor,
   Backpack,
@@ -97,7 +98,7 @@ function App() {
       placedAtSeconds: timeSeconds,
     };
     setPlacements((current) => [...current, item]);
-    setMessage(tool === "collector" ? "Great cleanup spot! Try the comparison." : "Splash! Your litter is ready to travel.");
+    setMessage(tool === "collector" ? "Great cleanup spot! Press play to watch for litter." : "Splash! Your litter is ready to travel.");
   };
 
   const removeItem = (id: string) => {
@@ -126,50 +127,53 @@ function App() {
       />
 
       <div className="map-overlay">
-        <header className="topbar">
-          <a className="brand" href="#top" aria-label="LitterVoyage home">
+        <motion.header className="topbar" initial={{ opacity: 0, y: -24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }}>
+          <motion.a className="brand" href="#top" aria-label="LitterVoyage home" whileHover={{ y: -2 }}>
             <span className="brand-mark"><Waves size={27} /></span>
             <span>Litter<span>Voyage</span></span>
-          </a>
-        </header>
+          </motion.a>
+        </motion.header>
 
-        <aside className="tool-panel" aria-label="Map tools">
+        <motion.aside className="tool-panel" aria-label="Map tools" initial={{ opacity: 0, x: -28 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.55, delay: 0.15 }}>
           <div className="panel-heading">
             <span className="eyebrow">Choose a tool</span>
             <h1>Make a splash</h1>
           </div>
           <div className="tool-grid">
             {tools.map(({ id, label, detail, icon: Icon }) => (
-              <button
+              <motion.button
                 className={`tool-button ${tool === id ? "tool-button--active" : ""}`}
                 key={id}
                 type="button"
                 aria-pressed={tool === id}
                 onClick={() => setTool(tool === id ? "explore" : id)}
+                whileHover={{ x: 5 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <span className={`tool-icon tool-icon--${id}`}><Icon size={24} /></span>
                 <span><strong>{label}</strong><small>{detail}</small></span>
-              </button>
+                {tool === id && <motion.span className="tool-selection-dot" layoutId="tool-selection" />}
+              </motion.button>
             ))}
           </div>
-        </aside>
+        </motion.aside>
 
-        <section className="guide-bubble" aria-live="polite">
-          <div className="mascot" aria-hidden="true"><span>•</span><span>•</span><b>⌣</b></div>
-          <div><span className="eyebrow">Finn says</span><p>{message}</p></div>
-        </section>
+        <motion.section className="guide-bubble" aria-live="polite" initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.35 }}>
+          <motion.div className="mascot" aria-hidden="true" animate={{ y: [0, -4, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}><span>•</span><span>•</span><b>⌣</b></motion.div>
+          <div><span className="eyebrow">Finn says</span><AnimatePresence mode="wait"><motion.p key={message} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>{message}</motion.p></AnimatePresence></div>
+        </motion.section>
 
-        <section className="bottom-dock" aria-label="Simulation controls">
+        <motion.section className="bottom-dock" aria-label="Simulation controls" initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}>
           <div className="status-row" aria-label="Simulation results">
             {(Object.keys(statusLabels) as ParticleStatus[]).map((status) => (
-              <div className={`status-chip status-chip--${status}`} key={status}>
-                <span>{counts[status]}</span>{statusLabels[status]}
-              </div>
+              <motion.div className={`status-chip status-chip--${status}`} key={status} layout>
+                <motion.span key={counts[status]} initial={{ scale: 1.35 }} animate={{ scale: 1 }}>{counts[status]}</motion.span>{statusLabels[status]}
+              </motion.div>
             ))}
           </div>
 
           <div className="playback-card">
-            <button
+            <motion.button
               className="play-button"
               type="button"
               aria-label={isPlaying ? "Pause simulation" : "Play simulation"}
@@ -177,10 +181,14 @@ function App() {
                 if (timeSeconds >= DURATION_SECONDS) setTimeSeconds(0);
                 setIsPlaying((current) => !current);
               }}
+              whileHover={{ scale: 1.06 }}
+              whileTap={{ scale: 0.92 }}
+              animate={isPlaying ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+              transition={isPlaying ? { duration: 1.4, repeat: Infinity } : { duration: 0.2 }}
             >
               {isPlaying ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}
-            </button>
-            <button className="reset-button" type="button" onClick={resetExperiment} aria-label="Restart experiment"><RotateCcw size={19} /></button>
+            </motion.button>
+            <motion.button className="reset-button" type="button" onClick={resetExperiment} aria-label="Restart experiment" whileHover={{ rotate: -45 }} whileTap={{ scale: 0.9 }}><RotateCcw size={19} /></motion.button>
             <div className="timeline">
               <label htmlFor="timeline-range"><span>Journey time</span><strong>{formatTime(timeSeconds)}</strong></label>
               <input
@@ -199,9 +207,9 @@ function App() {
               />
             </div>
           </div>
-        </section>
+        </motion.section>
 
-        <button className="source-button" type="button"><Info size={15} /> Data & assumptions</button>
+        <motion.button className="source-button" type="button" whileHover={{ y: -3 }} whileTap={{ scale: 0.96 }}><Info size={15} /> Data & assumptions</motion.button>
       </div>
     </main>
   );

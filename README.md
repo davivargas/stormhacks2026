@@ -4,6 +4,34 @@ A kid-friendly ocean litter simulation built with React, TypeScript, Vite, Mapbo
 
 ## Start locally
 
+Run both the backend and frontend from one terminal:
+
+```bash
+./start-dev.sh
+```
+
+The launcher requires Python 3.12+, Node.js/npm, and Linux's `setsid` command.
+On first launch it creates `backend/.venv` and installs missing backend/frontend
+dependencies. It uses one backend worker with reload, starts the frontend on
+http://localhost:5173 and the API on http://localhost:8000, and stops both servers
+when you press Ctrl+C. API documentation is at http://localhost:8000/docs.
+Configure Mapbox in the root `.env` or `.env.local`; optional backend credentials
+belong in `backend/.env`. The launcher does not create or overwrite environment
+files. Both servers share the terminal's log output.
+
+If a port is already occupied, the launcher exits before starting either server.
+Choose another backend port with:
+
+```bash
+BACKEND_PORT=8001 ./start-dev.sh
+```
+
+You can also set `FRONTEND_PORT=5174`. The launcher automatically points Vite's
+`VITE_API_BASE_URL` at the selected backend port and sets the default backend CORS
+origins to the selected frontend port.
+
+To run just the frontend:
+
 ```bash
 npm install
 cp .env.example .env.local
