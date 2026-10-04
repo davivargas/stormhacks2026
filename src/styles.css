@@ -518,6 +518,24 @@ input:focus-visible {
   max-width: min(330px, calc(100vw - 36px));
 }
 
+.guide-bubble--speech {
+  border-color: rgba(22, 167, 124, 0.28);
+  box-shadow: 0 6px 0 rgba(22, 167, 124, 0.14);
+}
+
+.guide-bubble--speech::after {
+  position: absolute;
+  bottom: -10px;
+  left: 34px;
+  width: 18px;
+  height: 18px;
+  content: "";
+  border-right: 2px solid rgba(22, 167, 124, 0.28);
+  border-bottom: 2px solid rgba(22, 167, 124, 0.28);
+  background: #fff;
+  transform: rotate(45deg);
+}
+
 .mascot {
   position: relative;
   display: flex;

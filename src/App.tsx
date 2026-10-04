@@ -51,6 +51,10 @@ function formatTime(seconds: number) {
   return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
 }
 
+function splitNarrationLines(script: string) {
+  return script.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g)?.map((line) => line.trim()).filter(Boolean) ?? [script];
+}
+
 function buildStorySummary(
   trajectories: ParticleTrajectory[],
   comparison: ComparisonMode,
@@ -110,6 +114,8 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   const [isPlaying, setIsPlaying] = useState(false);
   const [isNarrating, setIsNarrating] = useState(false);
   const [isPreparingNarration, setIsPreparingNarration] = useState(false);
+  const [narrationLines, setNarrationLines] = useState<string[]>([]);
+  const [narrationLineIndex, setNarrationLineIndex] = useState(0);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isDataOpen, setIsDataOpen] = useState(false);
   const [message, setMessage] = useState("Choose a litter type, then click the ocean to place it.");
@@ -134,6 +140,9 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     () => (storySummary ? JSON.stringify(storySummary) : null),
     [storySummary],
   );
+  const displayedMessage = isNarrating && narrationLines.length > 0
+    ? narrationLines[narrationLineIndex]
+    : message;
 
   const detachAudio = (audio: HTMLAudioElement | null) => {
     if (!audio) return;
@@ -167,6 +176,8 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     setIsPreparingNarration(false);
     setIsPlaying(false);
     setIsNarrating(false);
+    setNarrationLines([]);
+    setNarrationLineIndex(0);
   }, [storySignature]);
 
   useEffect(() => () => {
@@ -220,6 +231,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     if (audio.ended || audio.currentTime >= audio.duration - 0.05) {
       audio.currentTime = 0;
       setTimeSeconds(0);
+      setNarrationLineIndex(0);
     }
     try {
       await audio.play();
@@ -257,7 +269,10 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     try {
       const story = await requestOceanStory(storySummary);
       if (playbackRequestRef.current !== requestId) return;
-      setMessage(story.script);
+      const lines = splitNarrationLines(story.script);
+      setNarrationLines(lines);
+      setNarrationLineIndex(0);
+      setMessage(lines[0] ?? story.script);
 
       const narration = await requestStoryAudio(story.story_id);
       if (playbackRequestRef.current !== requestId) return;
@@ -265,7 +280,10 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       detachAudio(audioRef.current);
       const audio = new Audio(narration.audio_url);
       audio.preload = "auto";
-      audio.onplay = () => setIsNarrating(true);
+      audio.onplay = () => {
+        setNarrationLineIndex(0);
+        setIsNarrating(true);
+      };
       audio.onpause = () => setIsNarrating(false);
       audio.onended = () => {
         setIsNarrating(false);
@@ -279,6 +297,8 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       };
       audio.ontimeupdate = () => {
         if (Number.isFinite(audio.duration) && audio.duration > 0) {
+          const lineCount = narrationLines.length || splitNarrationLines(story.script).length;
+          setNarrationLineIndex(Math.min(lineCount - 1, Math.floor((audio.currentTime / audio.duration) * lineCount)));
           setTimeSeconds((audio.currentTime / audio.duration) * DURATION_SECONDS);
         }
       };
@@ -379,7 +399,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
           <div className="current-key"><span>↗</span><p><strong>Ocean current</strong>Arrows show water direction</p></div>
         </motion.aside>
 
-        <motion.section className={`guide-bubble ${isNarrating ? "guide-bubble--talking" : ""}`} aria-live="polite" initial={{ opacity: 0, y: 22, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.5, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}>
+        <motion.section className={`guide-bubble ${isNarrating ? "guide-bubble--talking guide-bubble--speech" : ""}`} aria-live="polite" initial={{ opacity: 0, y: 22, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.5, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}>
           <motion.div
             className={`mascot ${isNarrating ? "mascot--talking" : ""}`}
             aria-hidden="true"
@@ -388,7 +408,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
           >
             <img className="cartoon-turtle" src="/shelly-turtle.png" alt="Shelly the cartoon turtle" />
           </motion.div>
-          <div><span className="eyebrow">{isNarrating ? "Shelly is talking" : "Shelly says"}</span><AnimatePresence mode="wait"><motion.p key={message} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>{message}</motion.p></AnimatePresence></div>
+          <div><span className="eyebrow">{isNarrating ? "Shelly is talking" : "Shelly says"}</span><AnimatePresence mode="wait"><motion.p key={displayedMessage} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>{displayedMessage}</motion.p></AnimatePresence></div>
         </motion.section>
 
         <motion.section className="bottom-dock" aria-label="Simulation controls" initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}>
