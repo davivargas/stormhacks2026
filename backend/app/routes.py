@@ -79,6 +79,7 @@ def _persist(resp: SimulateResponse, req: SimulateRequest, fields: dict[str, Fie
         return True
     except Exception:
         log.warning("run save failed for %s", resp.run_id, exc_info=True)
+        db.report_failure()
         return False
 
 
@@ -99,6 +100,12 @@ def load_fields(req: SimulateRequest) -> dict[str, Field]:
     litter = [p for p in req.placements if p.type != "collector"]
     keys = {p.id: make_key(*p.coordinates, req.duration_days, slice_time) for p in litter}
     distinct = list(dict.fromkeys(keys.values()))
+    if len(distinct) > config.MAX_DISTINCT_BOXES:
+        raise ApiError(
+            422, "invalid_request",
+            "Items are spread over too many areas. "
+            f"Place them closer together (at most {config.MAX_DISTINCT_BOXES} areas per run).",
+        )
     resolved: dict = {}
     if distinct:
         with ThreadPoolExecutor(max_workers=min(8, len(distinct))) as pool:
@@ -296,6 +303,7 @@ def get_run(run_id: str) -> SimulateResponse:
                 return stored
         except Exception:
             log.warning("run load failed for %s, trying memory", run_id, exc_info=True)
+            db.report_failure()
     return _memory_run(run_id)
 
 
@@ -309,4 +317,5 @@ def get_timeline(run_id: str) -> TimelineResponse:
                 return stored
         except Exception:
             log.warning("timeline query failed for %s, trying memory", run_id, exc_info=True)
+            db.report_failure()
     return timeline_of(_memory_run(run_id))

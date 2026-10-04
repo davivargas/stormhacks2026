@@ -8,6 +8,7 @@ Longitudes are kept continuous around the box centre, so a box may extend past
 import concurrent.futures
 import logging
 import math
+import os
 import threading
 import time
 import uuid
@@ -273,6 +274,7 @@ def fetch_copernicus(key: SnapshotKey) -> Field:
 _cache: dict[SnapshotKey, tuple[Field, float | None]] = {}
 # Until this time.monotonic() deadline, Copernicus is skipped: one failure covers every box.
 _copernicus_down_until: float = 0.0
+_credentials_warned = False  # the missing-credentials warning is logged once
 _lock = threading.Lock()
 _pool = concurrent.futures.ThreadPoolExecutor(max_workers=8)
 # One worker: snapshot saves run in the background, in order.
@@ -299,18 +301,67 @@ def _remember(key: SnapshotKey, fld: Field, ttl: float | None = None) -> Field:
     return fld
 
 
+def _cached_superset(key: SnapshotKey) -> Field | None:
+    """A cached real field for the same point, hour and slices whose box is at least as large."""
+    with _lock:
+        for k, (fld, expires) in _cache.items():
+            if (
+                expires is None
+                and k.centre_lon == key.centre_lon
+                and k.centre_lat == key.centre_lat
+                and k.slice_time == key.slice_time
+                and k.n_slices == key.n_slices
+                and k.half_width_deg >= key.half_width_deg
+            ):
+                return fld
+    return None
+
+
+def _has_credentials() -> bool:
+    """False (logged once) when the toolbox would prompt for a login, which would block a worker."""
+    global _credentials_warned
+    if os.environ.get("COPERNICUSMARINE_SERVICE_USERNAME") and os.environ.get("COPERNICUSMARINE_SERVICE_PASSWORD"):
+        return True
+    if not _credentials_warned:
+        _credentials_warned = True
+        log.warning("Copernicus credentials are not set, using synthetic currents")
+    return False
+
+
+def _keep_late_result(key: SnapshotKey, future: concurrent.futures.Future) -> None:
+    """Done-callback for a fetch that finished after its request gave up: keep the result."""
+    global _copernicus_down_until
+    try:
+        if future.cancelled() or future.exception() is not None:
+            return
+        fld = future.result()
+        _remember(key, fld)  # a real field replaces a fallback
+        _store_pool.submit(_store, fld)
+        _copernicus_down_until = 0.0
+    except Exception:
+        log.warning("could not keep the late copernicus result for %s", key, exc_info=True)
+
+
 def _fetch_with_timeout(key: SnapshotKey) -> Field | None:
     """Copernicus within the time budget. Network, auth, timeout or empty box: None.
 
     After a failure Copernicus is skipped for SYNTHETIC_RETRY_S, so a request with
-    many boxes pays for one failed fetch, not one per box.
+    many boxes pays for one failed fetch, not one per box. A fetch that finishes
+    after the timeout is still cached and stored.
     """
     global _copernicus_down_until
     if time.monotonic() < _copernicus_down_until:
         return None
+    if not _has_credentials():
+        return None
     future = _pool.submit(fetch_copernicus, key)
     try:
         return future.result(timeout=config.COPERNICUS_TIMEOUT_S)
+    except concurrent.futures.TimeoutError:
+        log.warning("copernicus fetch timed out for %s, using synthetic field", key)
+        _copernicus_down_until = time.monotonic() + config.SYNTHETIC_RETRY_S
+        future.add_done_callback(lambda f: _keep_late_result(key, f))
+        return None
     except Exception:
         log.warning("copernicus fetch failed for %s, using synthetic field", key, exc_info=True)
         _copernicus_down_until = time.monotonic() + config.SYNTHETIC_RETRY_S
@@ -326,6 +377,7 @@ def _load_stored(key: SnapshotKey) -> Field | None:
         return db.load_snapshot(key)
     except Exception:
         log.warning("snapshot lookup failed for %s", key, exc_info=True)
+        db.report_failure()
         return None
 
 
@@ -338,10 +390,11 @@ def _store(fld: Field) -> None:
         db.save_snapshot(fld)
     except Exception:
         log.warning("snapshot save failed for %s", fld.key, exc_info=True)
+        db.report_failure()
 
 
 def load_field(key: SnapshotKey) -> Field:
-    """Field for the key: memory, then Tiger, then Copernicus, then a synthetic gyre.
+    """Field for the key: memory (a bigger real box for the same point and hour will do), then Tiger, then Copernicus, then a synthetic gyre.
 
     Real snapshots are stored in Tiger (in the background) and cached for the process.
     A fallback is reused for SYNTHETIC_RETRY_S so one request sees one field per box,
@@ -350,6 +403,9 @@ def load_field(key: SnapshotKey) -> Field:
     cached = _cached(key)
     if cached is not None:
         return cached
+    superset = _cached_superset(key)
+    if superset is not None:
+        return superset
     fld = _load_stored(key)
     if fld is None:
         fld = _fetch_with_timeout(key)

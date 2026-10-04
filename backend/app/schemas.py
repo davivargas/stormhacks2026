@@ -54,6 +54,8 @@ class SimulateRequest(ApiModel):
             raise ValueError("at least one litter placement is required")
         if len(litter) > config.MAX_LITTER_PLACEMENTS:
             raise ValueError(f"at most {config.MAX_LITTER_PLACEMENTS} litter placements")
+        if len(value) - len(litter) > config.MAX_COLLECTORS:
+            raise ValueError(f"at most {config.MAX_COLLECTORS} collectors")
         ids = [p.id for p in value]
         if len(ids) != len(set(ids)):
             raise ValueError("placement ids must be unique")

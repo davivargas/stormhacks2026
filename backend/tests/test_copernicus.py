@@ -129,6 +129,8 @@ def test_slow_fetch_times_out_to_synthetic(monkeypatch):
     started = time.monotonic()
     assert load_field(KEY).source == "synthetic"
     assert time.monotonic() - started < 0.4
+    while snapshot._cached(KEY).source != "copernicus":  # the late result lands in the cache; let it, so it cannot leak
+        time.sleep(0.01)
 
 
 def _failing_fetch(calls):

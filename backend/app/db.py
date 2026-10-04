@@ -5,6 +5,7 @@ fail a simulation. app.sim.snapshot imports this module lazily, never at module 
 """
 
 import logging
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -21,6 +22,8 @@ SCHEMA_PATH = Path(__file__).resolve().parent.parent / "scripts" / "schema.sql"
 STATUSES = ("floating", "captured", "beached", "outside")
 
 _pool: ConnectionPool | None = None
+# Until this time.monotonic() deadline the database is skipped: one error covers every caller.
+_down_until: float = 0.0
 
 
 # ---- connection -------------------------------------------------------------
@@ -28,7 +31,7 @@ _pool: ConnectionPool | None = None
 
 def init_pool() -> bool:
     """Open the pool. False (and unavailable) when there is no URL or no connection."""
-    global _pool
+    global _pool, _down_until
     if not config.DATABASE_URL:
         return False
     try:
@@ -38,6 +41,7 @@ def init_pool() -> bool:
         )
         pool.open(wait=True, timeout=10)
         _pool = pool
+        _down_until = 0.0
         return True
     except Exception:
         log.warning("Tiger Data unavailable", exc_info=True)
@@ -46,24 +50,33 @@ def init_pool() -> bool:
 
 
 def close_pool() -> None:
-    global _pool
+    global _pool, _down_until
     if _pool is not None:
         _pool.close()
         _pool = None
+    _down_until = 0.0
+
+
+def report_failure() -> None:
+    """A database call failed: skip the database for DATABASE_RETRY_S instead of waiting on it every time."""
+    global _down_until
+    _down_until = time.monotonic() + config.DATABASE_RETRY_S
+    log.warning("database error, skipping it for %s seconds", config.DATABASE_RETRY_S)
 
 
 def available() -> bool:
-    return _pool is not None
+    return _pool is not None and time.monotonic() >= _down_until
 
 
 def ping() -> bool:
-    if _pool is None:
+    if not available():
         return False
     try:
         with _pool.connection() as conn:
             conn.execute("SELECT 1")
         return True
     except Exception:
+        report_failure()
         return False
 
 

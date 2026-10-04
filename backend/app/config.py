@@ -20,6 +20,8 @@ FRAME_INTERVAL_SECONDS = 3600  # one recorded sample per hour
 # Collectors and request limits.
 DEFAULT_COLLECTOR_RADIUS_M = 10_000.0
 MAX_LITTER_PLACEMENTS = 50
+MAX_COLLECTORS = 20
+MAX_DISTINCT_BOXES = 8  # snapshot boxes (areas) one request may need
 
 # Snapshot box.
 HALF_WIDTH_CAP_DEG = 8.0
@@ -38,6 +40,7 @@ DRIFT_FACTOR = {"bottle": 1.0, "bag": 1.0, "foam": 1.0}
 COPERNICUS_DATASET_ID = "cmems_mod_glo_phy_anfc_merged-uv_PT1H-i"
 COPERNICUS_TIMEOUT_S = 30
 SYNTHETIC_RETRY_S = 60  # a fallback field is reused this long before Copernicus is tried again
+DATABASE_RETRY_S = 60  # after a database error the database is skipped this long
 
 # Arrows returned by /currents: roughly this many per side.
 CURRENT_ARROWS_PER_SIDE = 20
