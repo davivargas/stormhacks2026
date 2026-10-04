@@ -36,7 +36,36 @@ def test_field_pointing_at_land_beaches_and_freezes():
     beached = [s for s in out.samples if s[3] == "beached"]
     assert len(beached) > 1
     assert {(s[1], s[2]) for s in beached} == {(beached[0][1], beached[0][2])}
+    assert not fld.is_land(beached[0][1], beached[0][2], beached[0][0])
     assert all(s[0] < out.status_changed_at_seconds for s in out.samples if s[3] == "floating")
+
+
+def test_segment_crossing_a_narrow_island_beaches_before_reaching_water_again():
+    key = make_key(LON, LAT, 1, T0)
+    fld = synthetic_field(
+        key,
+        uniform=(0.5, 0.0),
+        land=lambda lon, lat: (lon > LON + 0.02) & (lon < LON + 0.04),
+        resolution=0.005,
+    )
+    item = engine.LitterItem("bottle-island", "bottle", LON, LAT)
+
+    out = engine.run(
+        [item],
+        [],
+        1,
+        {item.id: fld},
+        dt=14_400,
+        frame_interval=14_400,
+    ).outcomes[0]
+
+    assert out.final_status == "beached"
+    terminal = next(sample for sample in out.samples if sample[3] == "beached")
+    assert LON + 0.015 < terminal[1] < LON + 0.04
+    assert not fld.is_land(terminal[1], terminal[2], terminal[0])
+    assert {(sample[1], sample[2]) for sample in out.samples if sample[3] == "beached"} == {
+        (terminal[1], terminal[2])
+    }
 
 
 def test_item_passing_collector_is_captured_once_and_credited():

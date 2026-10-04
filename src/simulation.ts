@@ -13,6 +13,13 @@ export const DURATION_SECONDS = DEFAULT_DURATION_SECONDS;
 
 export const INITIAL_PLACEMENTS: Placement[] = [];
 
+export interface ImpactEvent {
+  id: string;
+  type: "captured" | "beached";
+  timeSeconds: number;
+  coordinates: Coordinates;
+}
+
 const movement: Record<string, { east: number; north: number; curve: number }> = {
   bottle: { east: 0.029, north: -0.005, curve: 0.012 },
   bag: { east: -0.014, north: -0.009, curve: -0.008 },
@@ -87,6 +94,28 @@ export function interpolateFrame(
       ],
       status,
     };
+  });
+}
+
+export function impactEventsBetween(
+  trajectories: ParticleTrajectory[],
+  previousTimeSeconds: number,
+  timeSeconds: number,
+): ImpactEvent[] {
+  if (timeSeconds <= previousTimeSeconds) return [];
+
+  return trajectories.flatMap((trajectory) => {
+    const sample = trajectory.samples.find(
+      ({ status }) => status === "beached" || status === "captured",
+    );
+    if (!sample || sample.timeSeconds <= previousTimeSeconds || sample.timeSeconds > timeSeconds) return [];
+
+    return [{
+      id: trajectory.id,
+      type: sample.status as ImpactEvent["type"],
+      timeSeconds: sample.timeSeconds,
+      coordinates: sample.coordinates,
+    }];
   });
 }
 

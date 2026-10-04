@@ -127,6 +127,63 @@ class Field:
         fx, fy = self._frac_index(lon, lat)
         return bool(self.land[self._time_index(t), round(fy), round(fx)])
 
+    def first_land_contact(
+        self,
+        start_lon: float,
+        start_lat: float,
+        end_lon: float,
+        end_lat: float,
+        start_t: float = 0.0,
+        end_t: float = 0.0,
+    ) -> tuple[float, float, float] | None:
+        """Return the last water point before this segment first enters a land cell."""
+        start_fx, start_fy = self._frac_index(start_lon, start_lat)
+        end_fx, end_fy = self._frac_index(end_lon, end_lat)
+        crossed_cells = max(abs(end_fx - start_fx), abs(end_fy - start_fy))
+        steps = max(1, math.ceil(crossed_cells * 4))
+        previous_fraction = 0.0
+
+        for step in range(1, steps + 1):
+            fraction = step / steps
+            lon = start_lon + (end_lon - start_lon) * fraction
+            lat = start_lat + (end_lat - start_lat) * fraction
+            t = start_t + (end_t - start_t) * fraction
+            if not self.is_land(lon, lat, t):
+                previous_fraction = fraction
+                continue
+
+            water_fraction, land_fraction = previous_fraction, fraction
+            for _ in range(20):
+                midpoint = (water_fraction + land_fraction) / 2
+                mid_lon = start_lon + (end_lon - start_lon) * midpoint
+                mid_lat = start_lat + (end_lat - start_lat) * midpoint
+                mid_t = start_t + (end_t - start_t) * midpoint
+                if self.is_land(mid_lon, mid_lat, mid_t):
+                    land_fraction = midpoint
+                else:
+                    water_fraction = midpoint
+
+            # Trajectory coordinates are serialized to five decimals. Keep a
+            # tiny water-side clearance so rounding cannot put them back on land.
+            coordinate_deltas = [
+                abs(delta)
+                for delta in (end_lon - start_lon, end_lat - start_lat)
+                if delta
+            ]
+            if coordinate_deltas:
+                water_fraction = max(
+                    previous_fraction,
+                    water_fraction - 0.00002 / max(coordinate_deltas),
+                )
+
+            return (
+                start_lon + (end_lon - start_lon) * water_fraction,
+                start_lat + (end_lat - start_lat) * water_fraction,
+                water_fraction,
+            )
+
+        return None
+
     def sample(self, lon: float, lat: float, t: float = 0.0) -> tuple[float, float]:
         """(u, v) in m/s: bilinear in space with land as zero, nearest slice in time."""
         fx, fy = self._frac_index(lon, lat)
