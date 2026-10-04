@@ -128,11 +128,12 @@ def test_evicted_runs_leave_the_session_index(monkeypatch):
     assert set(routes._run_sessions) == set(routes._runs)
 
 
-def test_delete_session_runs_removes_positions_then_runs_in_one_transaction(monkeypatch):
+def _fake_pool(monkeypatch, returned_rows):
     executed = []
 
     class Result:
-        rowcount = 4
+        def fetchall(self):
+            return returned_rows
 
     class Connection:
         def execute(self, sql, params):
@@ -154,12 +155,28 @@ def test_delete_session_runs_removes_positions_then_runs_in_one_transaction(monk
 
             return Scope()
 
-    monkeypatch.setattr(db, "_pool", Pool())
-    assert db.delete_session_runs("session-a") == 4
-    assert Pool.opened == 1
-    assert [sql.split(" WHERE ")[0] for sql, _ in executed] == ["DELETE FROM positions", "DELETE FROM runs"]
-    assert all(params == ("session-a",) for _, params in executed)
-    assert all("params->>'sessionId' = %s" in sql for sql, _ in executed)
+    pool = Pool()
+    monkeypatch.setattr(db, "_pool", pool)
+    return pool, executed
+
+
+def test_delete_session_runs_deletes_runs_first_then_their_positions_in_one_transaction(monkeypatch):
+    pool, executed = _fake_pool(monkeypatch, [("run-1",), ("run-2",)])
+    assert db.delete_session_runs("session-a") == 2
+    assert pool.opened == 1
+    assert len(executed) == 2
+    runs_sql, runs_params = executed[0]
+    assert runs_sql.startswith("DELETE FROM runs") and "RETURNING run_id" in runs_sql
+    assert "params->>'sessionId' = %s" in runs_sql
+    assert runs_params == ("session-a",)
+    assert executed[1] == ("DELETE FROM positions WHERE run_id = ANY(%s)", (["run-1", "run-2"],))
+
+
+def test_delete_session_runs_with_no_runs_skips_the_positions_delete(monkeypatch):
+    pool, executed = _fake_pool(monkeypatch, [])
+    assert db.delete_session_runs("session-a") == 0
+    assert pool.opened == 1
+    assert len(executed) == 1
 
 
 def test_configured_is_false_without_a_pool(monkeypatch):
