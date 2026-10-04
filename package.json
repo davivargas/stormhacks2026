@@ -1,20 +1,37 @@
 {
-  "name": "stormhacks-ui",
+  "name": "plastic-paths",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
+    "@turf/boolean-point-in-polygon": "^7.2.0",
+    "@turf/circle": "^7.2.0",
+    "@turf/helpers": "^7.2.0",
     "lucide-react": "^0.468.0",
+    "mapbox-gl": "^3.16.0",
     "motion": "^11.15.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "vite": "^6.0.5"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.5",
+    "@types/geojson": "^7946.0.16",
+    "@types/react": "^19.0.3",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.17.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.18.2",
+    "vite": "^6.0.5"
+  }
 }
