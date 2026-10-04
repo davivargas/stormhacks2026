@@ -2,7 +2,7 @@
 
 Date: 2026-10-03
 Owner: Person 3 (numerical backend)
-Status: draft for team review
+Status: approved. Phases 0 and 1 are built in `backend/`. Where the built contract differs from this text (timeline `buckets`, nested meta, health `{ok, db}`, error codes, run tables), the built contract wins; the differences are listed under Global Constraints in `docs/superpowers/plans/2026-10-03-simulation-tiger-data.md`.
 
 ## 1. Purpose
 

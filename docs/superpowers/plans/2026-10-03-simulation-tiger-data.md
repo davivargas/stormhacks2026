@@ -2,120 +2,100 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A FastAPI backend that turns litter placements anywhere on the ocean into stored, replayable drift trajectories using one frozen Copernicus current snapshot per item, persisted in Tiger Data.
+**Goal:** Finish the stream 3 backend: replace synthetic currents with real Copernicus snapshots and replace the in-memory run store with Tiger Data, without changing any response shape the other streams already build against.
 
-**Architecture:** A pure NumPy engine advects each item through a `Field` (a small lon/lat box of currents). A service layer resolves one `Field` per item (memory cache, then Tiger, then Copernicus, then a synthetic fallback), runs the engine, and maps results to the frontend's existing `ParticleTrajectory` JSON. Tiger Data stores snapshots and run positions in hypertables and serves replay and a `time_bucket` timeline.
+**Architecture:** Phases 0 and 1 already exist in `backend/` (contract, fixtures, engine, all seven endpoints on synthetic currents, runs in memory, 13 passing tests). This plan extends that code in place. `snapshot.load_field` gains two real sources in front of the synthetic fallback (Tiger cache, then Copernicus). A new `app/db.py` stores snapshots and run positions in two hypertables; `routes.py` writes every run there and serves replay and the `time_bucket` timeline from it, keeping the in-memory store as the fallback when the database is down.
 
-**Tech Stack:** Python 3.12+/3.13, FastAPI, Pydantic v2, NumPy, psycopg 3 with psycopg_pool, `copernicusmarine` toolbox, pytest. No SciPy, no Shapely.
+**Tech Stack:** Python 3.13, FastAPI, Pydantic v2, NumPy, xarray, `copernicusmarine` 2.5, psycopg 3 with `psycopg_pool`, pytest. All already installed in `backend/.venv` except `psycopg_pool`.
 
 **Spec:** `docs/superpowers/specs/2026-10-03-simulation-tiger-data-design.md`
 
-**Branch:** `feature/simulation-tiger-data`. All commands run from `backend/` unless stated. On Windows Git Bash activate the venv with `source .venv/Scripts/activate`.
+**Branch:** `feature/simulation-tiger-data`. All commands run from `backend/` with the project venv: `.venv/Scripts/python` (Git Bash) or `.venv\Scripts\python` (PowerShell).
+
+## What already exists (read before starting)
+
+| File | What it provides |
+|---|---|
+| `app/config.py` | constants: `DURATION_MIN_DAYS`, `DURATION_MAX_DAYS`, `DURATION_DEFAULT_DAYS`, `DT_SECONDS`, `FRAME_INTERVAL_SECONDS`, `HALF_WIDTH_CAP_DEG`, `CENTRE_ROUND_DEG`, `GRID_RESOLUTION_DEG`, `APPLY_STOKES`, `APPLY_TIDE`, `COPERNICUS_DATASET_ID`, `COPERNICUS_TIMEOUT_S`, `DATABASE_URL`, `half_width_deg(days)` |
+| `app/schemas.py` | `ApiModel` (camelCase), `SimulateRequest`, `SimulateResponse`, `CompareResponse`, `Summary`, `SnapshotInfo`, `TimelineBucket`, `TimelineResponse(run_id, bucket_seconds, buckets)`, `HealthResponse(ok, db)`, `ErrorResponse` |
+| `app/sim/snapshot.py` | `SnapshotKey`, `make_key(lon, lat, duration_days, slice_time)`, `current_slice_time()`, `COMPONENTS`, `Field(key, source, lon, lat, times, components, snapshot_id)` with `contains`, `is_land`, `sample`, `bounds`, `nx`, `ny`; `synthetic_field(key, uniform=, land=)`; `fetch_copernicus(key)` **stub that raises NotImplementedError**; `load_field(key)` with in-process `_cache`, thread pool timeout and synthetic fallback |
+| `app/sim/engine.py` | `LitterItem`, `Collector`, `ItemOutcome`, `RunResult`, `drift_item`, `run`, `STATUSES` |
+| `app/routes.py` | `ApiError`, all seven endpoints, `load_fields(req)`, `build_response(req, fields, honour_collectors=)`, `compare`, `timeline_of`, `snapshot_info`, in-memory `_runs` store via `_remember` and `_get_run` |
+| `app/main.py` | `create_app()`, CORS, gzip, error handlers (`invalid_request`, `ApiError`) |
+| `scripts/make_fixtures.py`, `scripts/fixtures/*.json` | canned responses for the other streams |
 
 ## Global Constraints
 
-- Durations: integer days, 1 to 30, default 7. One duration and one timeline per run; every item starts at second zero.
-- Integration step 600 s. Samples recorded every 3600 s. `timeSeconds` is elapsed seconds from run start.
-- Statuses are exactly `floating`, `captured`, `beached`, `outside` (the frontend's `ParticleStatus`).
-- Coordinates are always `[longitude, latitude]`.
-- JSON keys are camelCase; Python and SQL are snake_case.
-- Box half-width: `min(8.0, ceil((1.0 + 0.4 * days) * 2) / 2)` degrees. Box centre: drop point rounded to 0.5 degrees.
-- Dataset id: `cmems_mod_glo_phy_anfc_merged-uv_PT1H-i`. MVP uses `uo + ustokes`, `vo + vstokes`. Tide is stored, not applied (`USE_TIDE = False`).
-- Land is where `uo` is NaN.
-- Default collector radius 10 000 m. Maximum 50 litter placements per run.
-- Copernicus fetch budget 20 s, then synthetic fallback with `source: "synthetic"`. Never fail a simulate request because of the network or the database.
+- **Do not change any JSON shape.** The other streams build against `scripts/fixtures/*.json`. The as-built contract differs from the spec text in these ways, and the as-built version wins: timeline is `{runId, bucketSeconds, buckets}`; meta is nested (`durationDays{min,max,default}`, `defaults{...}`); health is `{ok, db}`; validation errors are `{code: "invalid_request", message, details}`; a missing run is `{code: "run_not_found"}`; a request with no litter is rejected with 422.
+- Statuses are exactly `floating`, `captured`, `beached`, `outside`. Coordinates are `[longitude, latitude]`. JSON is camelCase, Python and SQL snake_case.
+- Longitudes inside a `Field` are continuous around the box centre and may pass 180; trajectories may therefore contain longitudes slightly beyond the range. Keep that; it makes trails continuous across the antimeridian.
+- Dataset id comes from `config.COPERNICUS_DATASET_ID`. MVP sums circulation and wave drift (`APPLY_STOKES = True`); tide is fetched and stored but not applied (`APPLY_TIDE = False`). Land is where `uo` is NaN.
+- One frozen time slice per snapshot (`n_slices = 1`), keyed by the hour. One duration and one timeline per run.
+- Copernicus fetch budget is `config.COPERNICUS_TIMEOUT_S` (20 s), then synthetic fallback with `source: "synthetic"`. A simulate request never fails because of the network or the database.
 - Secrets live only in `backend/.env` (gitignored). Tests never touch the network or a real database.
-- Deviations from the spec, deliberate: `requirements.txt` instead of `pyproject.toml` (pip only, no uv on the dev machine); the fetch lives in `app/sim/copernicus.py` beside `snapshot.py`; an `app/service.py` keeps routes thin; status checks run in the order outside, beached, captured (an out-of-box position must not be read as a clipped land cell); `runs.start_time` (the slice hour) anchors `positions.time`.
+- Deviations from the spec, deliberate: the snapshot fetch lives in `app/sim/snapshot.py` (where the stub already is); run items and collectors are stored inside a `runs.envelope` JSONB column instead of two extra tables (fewer tables, exact replay); `/runs/{id}` falls back to the in-memory store instead of returning 503 when the database is down.
 
 ## Review Focus
 
-1. **Empty or collector-only placements.** A run with no litter must return HTTP 200 with empty `trajectories` and all-zero `summary`, not crash. Test in Task 4.
-2. **Item dropped inside a collector's radius.** It is captured at second zero, counted once, and never moves. Test in Task 3.
-3. **Bad coordinates and duplicate ids.** Latitude beyond 90, longitude beyond 180, or two placements with one id are rejected with 422 before any work. Tests in Task 1.
-4. **Drop near the antimeridian or a pole.** The box is clamped to valid lon/lat instead of wrapping; an item reaching the clamp edge becomes `outside`. Test in Task 2.
-5. **Coastal cells with a mix of land and water corners.** Sampling treats land corners as zero velocity and never returns NaN, so a position can never become NaN. Test in Task 2.
+1. **Item dropped inside a collector's radius.** Captured at second zero, counted once, never moves. Test in Task 1.
+2. **Coastal cells with mixed land and water corners.** Sampling treats land corners as zero velocity and never returns NaN. Test in Task 1.
+3. **Bad input.** Duplicate ids, coordinates out of range, no litter, more than 50 litter, fractional duration: each is a 422 with `code: "invalid_request"`, before any work. Tests in Task 1.
+4. **Drop near the antimeridian.** Synthetic boxes span it. A real fetch is clamped to the map edge instead of failing, and the item becomes `outside` if it reaches the cut. Tests in Tasks 1 and 2.
+5. **Copernicus slow, down, or returning nothing for the box.** The request still succeeds on a synthetic field, and the real source is retried a minute later rather than being pinned to synthetic for the whole hour. Tests in Task 2.
 
 ## File Structure
 
 ```
 backend/
-  requirements.txt            pinned floor versions; copernicusmarine added in Task 5
-  .env.example                already committed
+  pyproject.toml              modify: psycopg pool extra
   app/
-    __init__.py
-    main.py                   app factory, CORS, lifespan (db pool from Task 6)
-    config.py                 every constant and the two box helpers
-    schemas.py                Pydantic models: the JSON contract
-    routes.py                 thin HTTP handlers only
-    service.py                resolve fields, validate land, run engine, build responses, persist
-    db.py                     Tiger Data access: pool, snapshots, runs, timeline
-    sim/
-      __init__.py
-      geo.py                  haversine and metres-per-degree constants
-      snapshot.py             Field, SnapshotKey, box_bounds, build_field, synthetic_field
-      engine.py               run(): time loop and status machine
-      copernicus.py           fetch_field(): the only code that talks to Copernicus
+    config.py                 modify: SYNTHETIC_RETRY_S
+    sim/snapshot.py           modify: real fetch_copernicus, field_from_dataset, load_field with Tiger and retry
+    db.py                     create: pool, snapshots, runs, timeline
+    routes.py                 modify: persist runs, replay and timeline from Tiger, health
+    main.py                   modify: lifespan opens and closes the pool
   scripts/
-    make_fixture.py           writes fixtures/simulate_response.json
-    fixtures/simulate_response.json
-    schema.sql
-    init_db.py
-    smoke.py                  manual end-to-end check against a running server
+    schema.sql                create
+    init_db.py                create
+    smoke_copernicus.py       create
+    smoke.py                  create
+    compression.sql           create
   tests/
-    conftest.py
-    test_schemas.py
-    test_snapshot.py
-    test_engine.py
-    test_api.py
-    test_copernicus.py
-    test_db_offline.py
-  Dockerfile
-  README.md
+    conftest.py               create: no network, no database, clean caches
+    test_hardening.py         create
+    test_copernicus.py        create
+    test_db_offline.py        create
+    test_persistence.py       create
+  Dockerfile, .dockerignore   create
+  README.md                   modify
 ```
 
 ---
 
-### Task 1: Scaffold and JSON contract (Phase 0, unblocks the other three streams)
+### Task 1: Baseline, test isolation and behaviour pins
+
+The phase 0 and 1 code is uncommitted. This task makes it safe to build on: tests that can never reach the network or a database, tests pinning the edge cases the later tasks must not break, and a commit.
 
 **Files:**
-- Create: `backend/requirements.txt`, `backend/app/__init__.py`, `backend/app/sim/__init__.py`, `backend/app/config.py`, `backend/app/schemas.py`, `backend/app/routes.py`, `backend/app/main.py`, `backend/scripts/make_fixture.py`, `backend/scripts/fixtures/simulate_response.json` (generated), `backend/tests/conftest.py`
-- Test: `backend/tests/test_schemas.py`
+- Create: `backend/tests/conftest.py`, `backend/tests/test_hardening.py`
+- Modify: `backend/pyproject.toml` (one dependency line)
 
 **Interfaces:**
-- Consumes: nothing.
-- Produces:
-  - `config`: `MIN_DAYS=1`, `MAX_DAYS=30`, `DEFAULT_DAYS=7`, `DT_SECONDS=600`, `SAMPLE_INTERVAL_SECONDS=3600`, `DEFAULT_COLLECTOR_RADIUS_M=10000.0`, `MAX_LITTER=50`, `MAX_HALF_WIDTH_DEG=8.0`, `CENTRE_ROUND_DEG=0.5`, `GRID_STEP_DEG=1/12`, `USE_TIDE=False`, `FETCH_TIMEOUT_S=20`, `DATASET_ID`, `DRIFT_FACTOR: dict[str, float]`, `DATABASE_URL: str`, `CORS_ORIGIN: str`, `ATTRIBUTION_SOURCE: str`, `LIMITATIONS: list[str]`, `half_width_deg(duration_days: int) -> float`, `round_centre(x: float) -> float`.
-  - `schemas`: `Placement`, `SimulateRequest`, `TrajectorySample`, `ParticleTrajectory`, `ItemSummary`, `CollectorSummary`, `StatusCounts`, `SnapshotInfo`, `Attribution`, `SimulateResponse`, `CompareResponse`, `Arrow`, `CurrentsResponse`, `MetaResponse`, `TimelinePoint`, `TimelineResponse`. Field names exactly as in the code below.
-  - `main.app` (FastAPI) and `routes.router` with `GET /api/health`, `GET /api/meta`.
+- Consumes: the existing modules listed above.
+- Produces: an autouse fixture `isolated` that replaces `snapshot.fetch_copernicus` with a function that raises, and clears `snapshot._cache` and `routes._runs` before every test. Later tasks rely on it: any test that needs a working fetch must monkeypatch `snapshot.fetch_copernicus` itself.
 
-- [ ] **Step 1: Create the environment**
+- [ ] **Step 1: Add the pool dependency**
 
-```bash
-cd backend
-python -m venv .venv
-source .venv/Scripts/activate
+In `backend/pyproject.toml` change the line `"psycopg[binary]>=3.2",` to:
+
+```toml
+  "psycopg[binary,pool]>=3.2",
 ```
 
-Create `backend/requirements.txt`:
+Run: `.venv/Scripts/python -m pip install -e ".[dev]"`
+Expected: installs `psycopg-pool`.
 
-```
-fastapi>=0.115
-uvicorn[standard]>=0.32
-pydantic>=2.9
-numpy>=2.1
-psycopg[binary,pool]>=3.2
-python-dotenv>=1.0
-pytest>=8.3
-httpx>=0.27
-```
-
-```bash
-pip install -r requirements.txt
-```
-
-Add `.venv` and `__pycache__` to the repo root `.gitignore` (append two lines: `.venv` and `__pycache__`).
-
-- [ ] **Step 2: Write the failing tests**
+- [ ] **Step 2: Isolate the tests**
 
 Create `backend/tests/conftest.py`:
 
@@ -125,1493 +105,134 @@ import os
 # Tests never touch a real database. Set before any app import;
 # load_dotenv does not override variables that already exist.
 os.environ["DATABASE_URL"] = ""
-```
 
-Create `backend/tests/test_schemas.py`:
-
-```python
-import json
-from pathlib import Path
-
-import pytest
-from fastapi.testclient import TestClient
-from pydantic import ValidationError
-
-from app import config
-from app.main import app
-from app.schemas import CompareResponse, SimulateRequest, SimulateResponse, StatusCounts
-
-FIXTURE = Path(__file__).resolve().parents[1] / "scripts" / "fixtures" / "simulate_response.json"
-
-
-@pytest.mark.parametrize("days,expected", [(1, 1.5), (7, 4.0), (17, 8.0), (30, 8.0)])
-def test_half_width_formula(days, expected):
-    assert config.half_width_deg(days) == expected
-
-
-def test_round_centre_to_half_degree():
-    assert config.round_centre(-125.3) == -125.5
-    assert config.round_centre(48.9) == 49.0
-
-
-def test_request_accepts_frontend_placements():
-    req = SimulateRequest.model_validate({
-        "placements": [
-            {"id": "bottle-1", "type": "bottle", "coordinates": [-125.3, 48.9]},
-            {"id": "collector-1", "type": "collector", "coordinates": [-125.0, 48.8]},
-        ],
-        "durationDays": 3,
-    })
-    assert req.duration_days == 3
-    assert req.collector_radius_m == 10000.0
-    assert req.placements[0].coordinates == (-125.3, 48.9)
-
-
-def test_request_defaults_to_seven_days():
-    assert SimulateRequest.model_validate({"placements": []}).duration_days == 7
-
-
-@pytest.mark.parametrize("days", [0, 31, 1.5])
-def test_duration_must_be_integer_between_1_and_30(days):
-    with pytest.raises(ValidationError):
-        SimulateRequest.model_validate({"placements": [], "durationDays": days})
-
-
-def test_duplicate_ids_rejected():
-    with pytest.raises(ValidationError):
-        SimulateRequest.model_validate({"placements": [
-            {"id": "a", "type": "bottle", "coordinates": [0, 0]},
-            {"id": "a", "type": "bag", "coordinates": [1, 1]},
-        ]})
-
-
-@pytest.mark.parametrize("coords", [[181, 0], [-181, 0], [0, 91], [0, -91]])
-def test_out_of_range_coordinates_rejected(coords):
-    with pytest.raises(ValidationError):
-        SimulateRequest.model_validate({"placements": [
-            {"id": "a", "type": "bottle", "coordinates": coords},
-        ]})
-
-
-def test_more_than_fifty_litter_rejected():
-    placements = [{"id": f"b{i}", "type": "bottle", "coordinates": [0, 0]} for i in range(51)]
-    with pytest.raises(ValidationError):
-        SimulateRequest.model_validate({"placements": placements})
-
-
-def test_fixture_matches_contract_and_is_camel_case():
-    raw = json.loads(FIXTURE.read_text())
-    parsed = SimulateResponse.model_validate(raw)
-    assert parsed.trajectories[0].samples[0].time_seconds == 0
-    assert "timeSeconds" in raw["trajectories"][0]["samples"][0]
-    assert set(raw["summary"]) == {"floating", "captured", "beached", "outside"}
-
-
-def test_compare_response_serialises_with_key():
-    one = SimulateResponse.model_validate(json.loads(FIXTURE.read_text()))
-    body = CompareResponse(
-        without=one, with_=one,
-        delta=StatusCounts(floating=0, captured=0, beached=0, outside=0),
-    ).model_dump(by_alias=True, mode="json")
-    assert set(body) == {"without", "with", "delta"}
-
-
-def test_health_and_meta_endpoints():
-    client = TestClient(app)
-    assert client.get("/api/health").json()["status"] == "ok"
-    meta = client.get("/api/meta").json()
-    assert meta["minDurationDays"] == 1
-    assert meta["maxDurationDays"] == 30
-    assert meta["defaultDurationDays"] == 7
-    assert meta["litterTypes"] == ["bottle", "bag", "foam"]
-    assert meta["attribution"]["dataset"] == config.DATASET_ID
-```
-
-- [ ] **Step 3: Run tests to verify they fail**
-
-Run: `python -m pytest tests/test_schemas.py -q`
-Expected: collection error, `ModuleNotFoundError: No module named 'app'`.
-
-- [ ] **Step 4: Implement config, schemas, routes, main**
-
-Create empty `backend/app/__init__.py` and `backend/app/sim/__init__.py`.
-
-Create `backend/app/config.py`:
-
-```python
-import math
-import os
-from pathlib import Path
-
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-
-MIN_DAYS = 1
-MAX_DAYS = 30
-DEFAULT_DAYS = 7
-DT_SECONDS = 600
-SAMPLE_INTERVAL_SECONDS = 3600
-DEFAULT_COLLECTOR_RADIUS_M = 10_000.0
-MAX_LITTER = 50
-MAX_HALF_WIDTH_DEG = 8.0
-CENTRE_ROUND_DEG = 0.5
-GRID_STEP_DEG = 1.0 / 12.0
-USE_TIDE = False
-FETCH_TIMEOUT_S = 20
-DATASET_ID = "cmems_mod_glo_phy_anfc_merged-uv_PT1H-i"
-DRIFT_FACTOR = {"bottle": 1.0, "bag": 1.0, "foam": 1.0}
-
-DATABASE_URL = os.getenv("DATABASE_URL", "")
-CORS_ORIGIN = os.getenv("CORS_ORIGIN", "http://localhost:5173")
-
-ATTRIBUTION_SOURCE = "Copernicus Marine Service, Global Ocean Physics Analysis and Forecast"
-LIMITATIONS = [
-    "Simplified simulation, not a validated real-world prediction",
-    "Single frozen time slice of the currents",
-    "No tide in this version",
-    "No wind, sinking or breakdown",
-    "About 9 km grid: small inlets and harbours are not resolved",
-]
-
-
-def half_width_deg(duration_days: int) -> float:
-    """Box half-width in degrees, rounded up to a half degree, capped."""
-    return min(MAX_HALF_WIDTH_DEG, math.ceil((1.0 + 0.4 * duration_days) * 2) / 2)
-
-
-def round_centre(x: float) -> float:
-    """Round a coordinate to the nearest CENTRE_ROUND_DEG for cache keys."""
-    return round(x / CENTRE_ROUND_DEG) * CENTRE_ROUND_DEG
-```
-
-Create `backend/app/schemas.py`:
-
-```python
-from datetime import datetime
-from typing import Literal
-
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from pydantic.alias_generators import to_camel
-
-from . import config
-
-LitterType = Literal["bottle", "bag", "foam"]
-PlacementType = Literal["bottle", "bag", "foam", "collector"]
-Status = Literal["floating", "captured", "beached", "outside"]
-Coordinates = tuple[float, float]  # (longitude, latitude)
-
-
-class Camel(BaseModel):
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class Placement(Camel):
-    id: str = Field(min_length=1)
-    type: PlacementType
-    coordinates: Coordinates
-
-    @field_validator("coordinates")
-    @classmethod
-    def _in_range(cls, value: Coordinates) -> Coordinates:
-        lon, lat = value
-        if not -180.0 <= lon <= 180.0 or not -90.0 <= lat <= 90.0:
-            raise ValueError("coordinates must be [longitude -180..180, latitude -90..90]")
-        return value
-
-
-class SimulateRequest(Camel):
-    placements: list[Placement]
-    duration_days: int = Field(default=config.DEFAULT_DAYS, ge=config.MIN_DAYS, le=config.MAX_DAYS)
-    collector_radius_m: float = Field(default=config.DEFAULT_COLLECTOR_RADIUS_M, gt=0, le=200_000)
-
-    @model_validator(mode="after")
-    def _check_placements(self) -> "SimulateRequest":
-        ids = [p.id for p in self.placements]
-        if len(ids) != len(set(ids)):
-            raise ValueError("placement ids must be unique")
-        litter = sum(1 for p in self.placements if p.type != "collector")
-        if litter > config.MAX_LITTER:
-            raise ValueError(f"at most {config.MAX_LITTER} litter placements per run")
-        return self
-
-
-class TrajectorySample(Camel):
-    time_seconds: int
-    coordinates: Coordinates
-    status: Status
-
-
-class ParticleTrajectory(Camel):
-    id: str
-    type: LitterType
-    samples: list[TrajectorySample]
-
-
-class ItemSummary(Camel):
-    id: str
-    type: LitterType
-    final_status: Status
-    captured_by: str | None = None
-    status_changed_at_seconds: int | None = None
-
-
-class CollectorSummary(Camel):
-    id: str
-    coordinates: Coordinates
-    radius_m: float
-    captured_count: int
-
-
-class StatusCounts(Camel):
-    floating: int
-    captured: int
-    beached: int
-    outside: int
-
-
-class SnapshotInfo(Camel):
-    snapshot_id: str
-    source: Literal["copernicus", "synthetic"]
-    slice_time: datetime
-    n_slices: int
-
-
-class Attribution(Camel):
-    source: str
-    dataset: str
-    limitations: list[str]
-
-
-class SimulateResponse(Camel):
-    run_id: str
-    duration_days: int
-    total_seconds: int
-    sample_interval_seconds: int
-    trajectories: list[ParticleTrajectory]
-    items: list[ItemSummary]
-    collectors: list[CollectorSummary]
-    summary: StatusCounts
-    snapshots: list[SnapshotInfo]
-    attribution: Attribution
-    persisted: bool
-
-
-class CompareResponse(Camel):
-    without: SimulateResponse
-    with_: SimulateResponse = Field(alias="with")
-    delta: StatusCounts
-
-
-class Arrow(Camel):
-    coordinates: Coordinates
-    u: float
-    v: float
-    speed: float
-    bearing: float  # degrees clockwise from north
-
-
-class CurrentsResponse(Camel):
-    snapshot: SnapshotInfo
-    bounds: tuple[Coordinates, Coordinates]  # [[west, south], [east, north]]
-    arrows: list[Arrow]
-
-
-class MetaResponse(Camel):
-    min_duration_days: int
-    max_duration_days: int
-    default_duration_days: int
-    sample_interval_seconds: int
-    default_collector_radius_m: float
-    litter_types: list[str]
-    attribution: Attribution
-
-
-class TimelinePoint(Camel):
-    time_seconds: int
-    floating: int
-    captured: int
-    beached: int
-    outside: int
-
-
-class TimelineResponse(Camel):
-    run_id: str
-    points: list[TimelinePoint]
-```
-
-Create `backend/app/routes.py`:
-
-```python
-from fastapi import APIRouter
-
-from . import config
-from .schemas import Attribution, MetaResponse
-
-router = APIRouter()
-
-
-def attribution() -> Attribution:
-    return Attribution(
-        source=config.ATTRIBUTION_SOURCE,
-        dataset=config.DATASET_ID,
-        limitations=config.LIMITATIONS,
-    )
-
-
-@router.get("/health")
-def health() -> dict:
-    return {"status": "ok", "db": False}
-
-
-@router.get("/meta", response_model=MetaResponse)
-def meta() -> MetaResponse:
-    return MetaResponse(
-        min_duration_days=config.MIN_DAYS,
-        max_duration_days=config.MAX_DAYS,
-        default_duration_days=config.DEFAULT_DAYS,
-        sample_interval_seconds=config.SAMPLE_INTERVAL_SECONDS,
-        default_collector_radius_m=config.DEFAULT_COLLECTOR_RADIUS_M,
-        litter_types=list(config.DRIFT_FACTOR),
-        attribution=attribution(),
-    )
-```
-
-Create `backend/app/main.py`:
-
-```python
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-from . import config
-from .routes import router
-
-
-def create_app() -> FastAPI:
-    app = FastAPI(title="PlasticPaths simulation API")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[config.CORS_ORIGIN],
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    app.include_router(router, prefix="/api")
-    return app
-
-
-app = create_app()
-```
-
-- [ ] **Step 5: Generate the frontend fixture**
-
-Create `backend/scripts/make_fixture.py`:
-
-```python
-"""Writes a canned /api/simulate response so the frontend can build before the engine exists.
-
-Run from backend/:  python -m scripts.make_fixture
-"""
-import json
-from datetime import datetime, timezone
-from pathlib import Path
-
-from app.routes import attribution
-from app.schemas import (
-    CollectorSummary, ItemSummary, ParticleTrajectory, SimulateResponse,
-    SnapshotInfo, StatusCounts, TrajectorySample,
-)
-
-OUT = Path(__file__).resolve().parent / "fixtures" / "simulate_response.json"
-
-
-def trajectory(pid: str, kind: str, lon: float, lat: float, dlon: float, dlat: float,
-               end_status: str, end_index: int, hours: int = 24) -> ParticleTrajectory:
-    samples = []
-    for h in range(hours + 1):
-        k = min(h, end_index)
-        status = end_status if h >= end_index else "floating"
-        samples.append(TrajectorySample(
-            time_seconds=h * 3600,
-            coordinates=(round(lon + dlon * k, 5), round(lat + dlat * k, 5)),
-            status=status,
-        ))
-    return ParticleTrajectory(id=pid, type=kind, samples=samples)
-
-
-def main() -> None:
-    response = SimulateResponse(
-        run_id="00000000-0000-0000-0000-000000000001",
-        duration_days=1,
-        total_seconds=86400,
-        sample_interval_seconds=3600,
-        trajectories=[
-            trajectory("bottle-1", "bottle", -125.30, 48.90, 0.012, -0.004, "captured", 9),
-            trajectory("bag-1", "bag", -125.60, 48.70, -0.010, 0.006, "beached", 15),
-            trajectory("foam-1", "foam", -125.90, 48.50, 0.008, 0.003, "floating", 999),
-        ],
-        items=[
-            ItemSummary(id="bottle-1", type="bottle", final_status="captured",
-                        captured_by="collector-1", status_changed_at_seconds=9 * 3600),
-            ItemSummary(id="bag-1", type="bag", final_status="beached",
-                        status_changed_at_seconds=15 * 3600),
-            ItemSummary(id="foam-1", type="foam", final_status="floating"),
-        ],
-        collectors=[CollectorSummary(id="collector-1", coordinates=(-125.19, 48.86),
-                                     radius_m=10000.0, captured_count=1)],
-        summary=StatusCounts(floating=1, captured=1, beached=1, outside=0),
-        snapshots=[SnapshotInfo(snapshot_id="00000000-0000-0000-0000-0000000000aa",
-                                source="synthetic",
-                                slice_time=datetime(2026, 10, 3, 18, tzinfo=timezone.utc),
-                                n_slices=1)],
-        attribution=attribution(),
-        persisted=False,
-    )
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(response.model_dump(by_alias=True, mode="json"), indent=2))
-    print(f"wrote {OUT}")
-
-
-if __name__ == "__main__":
-    main()
-```
-
-Create empty `backend/scripts/__init__.py`, then run: `python -m scripts.make_fixture`
-Expected: `wrote ...simulate_response.json`
-
-- [ ] **Step 6: Run tests to verify they pass**
-
-Run: `python -m pytest tests/test_schemas.py -q`
-Expected: all pass (19 tests).
-
-- [ ] **Step 7: Check the server starts**
-
-Run: `python -m uvicorn app.main:app --port 8000` then open `http://localhost:8000/api/meta` and `http://localhost:8000/docs`. Stop the server.
-Expected: JSON with `minDurationDays: 1`; the docs page lists the two endpoints.
-
-- [ ] **Step 8: Commit and tell the team**
-
-```bash
-git add ../.gitignore requirements.txt app scripts tests
-git commit -m "feat(backend): scaffold, JSON contract, meta endpoint and frontend fixture"
-```
-
-Tell Persons 1, 2 and 4 that `backend/scripts/fixtures/simulate_response.json` is the response shape and that `http://localhost:8000/docs` shows every model.
-
----
-
-### Task 2: Current field, snapshot key, synthetic fallback
-
-**Files:**
-- Create: `backend/app/sim/geo.py`, `backend/app/sim/snapshot.py`, `backend/tests/__init__.py` (empty), `backend/tests/helpers.py`
-- Test: `backend/tests/test_snapshot.py`
-
-**Interfaces:**
-- Consumes: `config.half_width_deg`, `config.round_centre`, `config.GRID_STEP_DEG`, `config.USE_TIDE`.
-- Produces:
-  - `geo.M_PER_DEG_LAT = 110_540.0`, `geo.M_PER_DEG_LON_EQUATOR = 111_320.0`, `geo.haversine_m(lon1, lat1, lon2, lat2) -> float`.
-  - `snapshot.SnapshotKey(centre_lon, centre_lat, half_width_deg, slice_time, n_slices=1)` frozen dataclass (hashable).
-  - `snapshot.key_for(lon: float, lat: float, duration_days: int, slice_time: datetime) -> SnapshotKey`.
-  - `snapshot.box_bounds(key) -> tuple[float, float, float, float]` as `(west, south, east, north)`.
-  - `snapshot.Field` dataclass: `lon` (nx,), `lat` (ny,), `u` and `v` (nt, ny, nx) float32 with NaN on land, `slice_time`, `source`, `snapshot_id: str`, `components: dict[str, np.ndarray]`. Methods `contains(lon, lat) -> bool`, `is_land(lon, lat) -> bool`, `sample(lon, lat, t_seconds=0.0) -> tuple[float, float]`.
-  - `snapshot.COMPONENT_NAMES = ("uo", "vo", "utide", "vtide", "ustokes", "vstokes")`.
-  - `snapshot.build_field(lon, lat, components, slice_time, source, snapshot_id=None) -> Field`.
-  - `snapshot.synthetic_field(key: SnapshotKey) -> Field`.
-  - `tests.helpers.uniform_field(u=0.0, v=0.0, lon0=0.0, lat0=0.0, size_deg=2.0, land_from_lon=None) -> Field` and `tests.helpers.T0` (a UTC datetime).
-
-- [ ] **Step 1: Write the test helper and failing tests**
-
-Create empty `backend/tests/__init__.py`.
-
-Create `backend/tests/helpers.py`:
-
-```python
-from datetime import datetime, timezone
-
-import numpy as np
-
-from app import config
-from app.sim.snapshot import Field
-
-T0 = datetime(2026, 10, 3, 18, tzinfo=timezone.utc)
-
-
-def uniform_field(u=0.0, v=0.0, lon0=0.0, lat0=0.0, size_deg=2.0, land_from_lon=None) -> Field:
-    """A square box of constant current. Cells at or east of land_from_lon are land."""
-    step = config.GRID_STEP_DEG
-    n = int(round(size_deg / step)) + 1
-    lon = lon0 + np.arange(n) * step
-    lat = lat0 + np.arange(n) * step
-    uu = np.full((1, n, n), u, dtype="float32")
-    vv = np.full((1, n, n), v, dtype="float32")
-    if land_from_lon is not None:
-        land = lon >= land_from_lon
-        uu[:, :, land] = np.nan
-        vv[:, :, land] = np.nan
-    return Field(lon=lon, lat=lat, u=uu, v=vv, slice_time=T0, source="synthetic")
-```
-
-Create `backend/tests/test_snapshot.py`:
-
-```python
-import math
-
-import numpy as np
-import pytest
-
-from app import config
-from app.sim import geo
-from app.sim.snapshot import (
-    COMPONENT_NAMES, SnapshotKey, box_bounds, build_field, key_for, synthetic_field,
-)
-from tests.helpers import T0, uniform_field
-
-STEP = config.GRID_STEP_DEG
-
-
-def test_haversine_one_degree_of_latitude():
-    assert geo.haversine_m(0.0, 0.0, 0.0, 1.0) == pytest.approx(111_195, rel=1e-3)
-
-
-def test_sample_uniform_field():
-    f = uniform_field(u=0.5, v=-0.2)
-    assert f.sample(1.0, 1.0) == pytest.approx((0.5, -0.2))
-
-
-def test_sample_is_bilinear_between_cells():
-    f = uniform_field()
-    n = f.lon.size
-    f.u[0] = np.arange(n, dtype="float32")[None, :]  # u equals the column index
-    u, _ = f.sample(f.lon[0] + 2.5 * STEP, 1.0)
-    assert u == pytest.approx(2.5, abs=1e-4)
-
-
-def test_sample_ignores_time_when_single_slice():
-    f = uniform_field(u=0.3)
-    assert f.sample(1.0, 1.0, t_seconds=10 * 86400)[0] == pytest.approx(0.3)
-
-
-def test_is_land_and_contains():
-    f = uniform_field(u=0.5, land_from_lon=1.5)
-    assert f.is_land(1.8, 1.0) is True
-    assert f.is_land(0.5, 1.0) is False
-    assert f.contains(0.5, 1.0) is True
-    assert f.contains(2.5, 1.0) is False
-    assert f.contains(0.5, -0.1) is False
-
-
-def test_sample_next_to_land_is_never_nan():
-    # Review Focus 5: land corners count as zero velocity.
-    # 1.49 is deliberately off-grid so the cell at 1.5 is land despite float rounding.
-    f = uniform_field(u=0.5, v=0.5, land_from_lon=1.49)
-    u, v = f.sample(1.5 - STEP * 0.4, 1.0)  # 60% of the way from a water cell to a land cell
-    assert not math.isnan(u) and not math.isnan(v)
-    assert u == pytest.approx(0.2, abs=0.01)
-
-
-def test_key_for_rounds_centre_and_sizes_box():
-    key = key_for(-125.3, 48.9, 7, T0)
-    assert key == SnapshotKey(-125.5, 49.0, 4.0, T0, 1)
-    assert box_bounds(key) == (-129.5, 45.0, -121.5, 53.0)
-
-
-def test_box_is_clamped_at_antimeridian_and_pole():
-    # Review Focus 4: no wrapping; the box is cut at the edge of the map.
-    west, south, east, north = box_bounds(key_for(179.9, 0.0, 7, T0))
-    assert (west, east) == (176.0, 180.0)
-    west, south, east, north = box_bounds(key_for(0.0, 89.8, 7, T0))
-    assert (south, north) == (86.0, 89.0)
-
-
-def test_synthetic_field_covers_box_and_moves_water():
-    key = key_for(10.2, -20.1, 1, T0)
-    f = synthetic_field(key)
-    west, south, east, north = box_bounds(key)
-    assert f.source == "synthetic"
-    assert f.u.shape == (1, f.lat.size, f.lon.size)
-    assert f.lon[0] == pytest.approx(west) and f.lon[-1] == pytest.approx(east, abs=STEP)
-    assert not np.isnan(f.u).any()
-    u, v = f.sample(10.2, -20.1)
-    assert math.hypot(u, v) > 0.05
-
-
-def test_build_field_sums_circulation_and_waves_but_not_tide():
-    shape = (1, 3, 3)
-    comps = {name: np.zeros(shape, dtype="float32") for name in COMPONENT_NAMES}
-    comps["uo"][:] = 0.2
-    comps["ustokes"][:] = 0.05
-    comps["utide"][:] = 1.0
-    comps["uo"][0, 0, 0] = np.nan  # one land cell
-    lon = np.array([0.0, STEP, 2 * STEP])
-    f = build_field(lon, lon.copy(), comps, T0, "copernicus")
-    assert f.u[0, 1, 1] == pytest.approx(0.25)
-    assert np.isnan(f.u[0, 0, 0]) and np.isnan(f.v[0, 0, 0])
-    assert f.source == "copernicus"
-    assert set(f.components) == set(COMPONENT_NAMES)
-
-
-def test_build_field_flips_descending_latitude():
-    shape = (1, 2, 2)
-    comps = {name: np.zeros(shape, dtype="float32") for name in COMPONENT_NAMES}
-    comps["uo"][0, 0, :] = 1.0  # first row belongs to the northern latitude
-    f = build_field(np.array([0.0, STEP]), np.array([STEP, 0.0]), comps, T0, "copernicus")
-    assert f.lat[0] < f.lat[1]
-    assert f.u[0, 1, 0] == pytest.approx(1.0)
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `python -m pytest tests/test_snapshot.py -q`
-Expected: collection error, `ModuleNotFoundError: No module named 'app.sim.snapshot'`.
-
-- [ ] **Step 3: Implement geo and snapshot**
-
-Create `backend/app/sim/geo.py`:
-
-```python
-import math
-
-M_PER_DEG_LAT = 110_540.0
-M_PER_DEG_LON_EQUATOR = 111_320.0
-EARTH_RADIUS_M = 6_371_000.0
-
-
-def haversine_m(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
-    """Great-circle distance in metres."""
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dp = p2 - p1
-    dl = math.radians(lon2 - lon1)
-    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 2 * EARTH_RADIUS_M * math.asin(math.sqrt(a))
-```
-
-Create `backend/app/sim/snapshot.py`:
-
-```python
-import math
-import uuid
-from dataclasses import dataclass, field
-from datetime import datetime
-
-import numpy as np
-
-from .. import config
-
-COMPONENT_NAMES = ("uo", "vo", "utide", "vtide", "ustokes", "vstokes")
-
-
-@dataclass(frozen=True)
-class SnapshotKey:
-    centre_lon: float
-    centre_lat: float
-    half_width_deg: float
-    slice_time: datetime
-    n_slices: int = 1
-
-
-def key_for(lon: float, lat: float, duration_days: int, slice_time: datetime) -> SnapshotKey:
-    return SnapshotKey(
-        config.round_centre(lon),
-        config.round_centre(lat),
-        config.half_width_deg(duration_days),
-        slice_time,
-        1,
-    )
-
-
-def box_bounds(key: SnapshotKey) -> tuple[float, float, float, float]:
-    """(west, south, east, north), clamped to the map. No antimeridian wrapping."""
-    hw = key.half_width_deg
-    return (
-        max(-180.0, key.centre_lon - hw),
-        max(-89.0, key.centre_lat - hw),
-        min(180.0, key.centre_lon + hw),
-        min(89.0, key.centre_lat + hw),
-    )
-
-
-@dataclass
-class Field:
-    """A regular lon/lat box of currents. u and v are (nt, ny, nx), NaN on land."""
-    lon: np.ndarray
-    lat: np.ndarray
-    u: np.ndarray
-    v: np.ndarray
-    slice_time: datetime
-    source: str
-    snapshot_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    components: dict = field(default_factory=dict)
-
-    def contains(self, lon: float, lat: float) -> bool:
-        return bool(self.lon[0] <= lon <= self.lon[-1] and self.lat[0] <= lat <= self.lat[-1])
-
-    def _frac(self, lon: float, lat: float) -> tuple[float, float]:
-        fx = (lon - self.lon[0]) / (self.lon[1] - self.lon[0])
-        fy = (lat - self.lat[0]) / (self.lat[1] - self.lat[0])
-        return fx, fy
-
-    def is_land(self, lon: float, lat: float) -> bool:
-        fx, fy = self._frac(lon, lat)
-        i = min(max(math.floor(fx + 0.5), 0), self.lon.size - 1)
-        j = min(max(math.floor(fy + 0.5), 0), self.lat.size - 1)
-        return bool(np.isnan(self.u[0, j, i]))
-
-    def sample(self, lon: float, lat: float, t_seconds: float = 0.0) -> tuple[float, float]:
-        """Velocity in m/s: bilinear in space, nearest slice in time, land corners = 0."""
-        k = min(int(t_seconds // 3600), self.u.shape[0] - 1)
-        fx, fy = self._frac(lon, lat)
-        i0 = min(max(math.floor(fx), 0), self.lon.size - 2)
-        j0 = min(max(math.floor(fy), 0), self.lat.size - 2)
-        tx = min(max(fx - i0, 0.0), 1.0)
-        ty = min(max(fy - j0, 0.0), 1.0)
-
-        def interp(a: np.ndarray) -> float:
-            c = np.nan_to_num(a[k, j0:j0 + 2, i0:i0 + 2], nan=0.0)
-            south = c[0, 0] * (1 - tx) + c[0, 1] * tx
-            north = c[1, 0] * (1 - tx) + c[1, 1] * tx
-            return float(south * (1 - ty) + north * ty)
-
-        return interp(self.u), interp(self.v)
-
-
-def build_field(lon, lat, components: dict, slice_time: datetime, source: str,
-                snapshot_id: str | None = None) -> Field:
-    """Combine raw components into total u/v. Land is where uo is NaN."""
-    lon = np.asarray(lon, dtype="float64")
-    lat = np.asarray(lat, dtype="float64")
-    comps = {name: np.asarray(components[name], dtype="float32") for name in COMPONENT_NAMES}
-    if lat[0] > lat[-1]:
-        lat = lat[::-1].copy()
-        comps = {name: a[:, ::-1, :].copy() for name, a in comps.items()}
-    land = np.isnan(comps["uo"])
-
-    def clean(name: str) -> np.ndarray:
-        return np.nan_to_num(comps[name], nan=0.0)
-
-    u = clean("uo") + clean("ustokes")
-    v = clean("vo") + clean("vstokes")
-    if config.USE_TIDE:
-        u = u + clean("utide")
-        v = v + clean("vtide")
-    u[land] = np.nan
-    v[land] = np.nan
-    extra = {"snapshot_id": snapshot_id} if snapshot_id else {}
-    return Field(lon=lon, lat=lat, u=u, v=v, slice_time=slice_time, source=source,
-                 components=comps, **extra)
-
-
-def synthetic_field(key: SnapshotKey) -> Field:
-    """A gentle rotating gyre plus an eastward drift. Used when Copernicus is unreachable."""
-    west, south, east, north = box_bounds(key)
-    step = config.GRID_STEP_DEG
-    lon = west + np.arange(int(round((east - west) / step)) + 1) * step
-    lat = south + np.arange(int(round((north - south) / step)) + 1) * step
-    grid_lon, grid_lat = np.meshgrid(lon, lat)
-    hw = key.half_width_deg
-    zeros = np.zeros((1, lat.size, lon.size), dtype="float32")
-    comps = {name: zeros.copy() for name in COMPONENT_NAMES}
-    comps["uo"][0] = 0.1 - 0.3 * (grid_lat - key.centre_lat) / hw
-    comps["vo"][0] = 0.3 * (grid_lon - key.centre_lon) / hw
-    return build_field(lon, lat, comps, key.slice_time, "synthetic")
-```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `python -m pytest tests/test_snapshot.py -q`
-Expected: 11 passed.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add app/sim/geo.py app/sim/snapshot.py tests/__init__.py tests/helpers.py tests/test_snapshot.py
-git commit -m "feat(backend): current field sampling, snapshot keys and synthetic fallback"
-```
-
----
-
-### Task 3: Simulation engine and status machine
-
-**Files:**
-- Create: `backend/app/sim/engine.py`
-- Test: `backend/tests/test_engine.py`
-
-**Interfaces:**
-- Consumes: `Field.contains`, `Field.is_land`, `Field.sample`, `geo.haversine_m`, `geo.M_PER_DEG_LAT`, `geo.M_PER_DEG_LON_EQUATOR`, `config.DT_SECONDS`, `config.SAMPLE_INTERVAL_SECONDS`, `config.DRIFT_FACTOR`, `tests.helpers.uniform_field`.
-- Produces:
-  - `engine.Litter(id: str, type: str, lon: float, lat: float)`
-  - `engine.Collector(id: str, lon: float, lat: float, radius_m: float)`
-  - `engine.ItemResult(id, type, final_status, captured_by, status_changed_at_seconds, samples)` where `samples` is `list[tuple[int, float, float, str]]` as `(time_seconds, lon, lat, status)`.
-  - `engine.RunResult(items: list[ItemResult], captured_counts: dict[str, int], summary: dict[str, int], total_seconds: int)`; `summary` always has the four status keys.
-  - `engine.run(litter: list[Litter], collectors: list[Collector], duration_days: int, fields: dict[str, Field]) -> RunResult` where `fields` maps litter id to its `Field`.
-
-- [ ] **Step 1: Write the failing tests**
-
-Create `backend/tests/test_engine.py`:
-
-```python
-import math
-
-import pytest
-
-from app.sim.engine import Collector, Litter, run
-from tests.helpers import uniform_field
-
-
-def one(item, field, collectors=(), days=1):
-    return run([item], list(collectors), days, {item.id: field})
-
-
-def test_uniform_eastward_current_moves_item_the_expected_distance():
-    result = one(Litter("a", "bottle", 0.5, 1.0), uniform_field(u=0.5))
-    item = result.items[0]
-    expected_lon = 0.5 + 0.5 * 86400 / (111_320 * math.cos(math.radians(1.0)))  # about 43 km
-    t, lon, lat, status = item.samples[-1]
-    assert t == 86400 and status == "floating"
-    assert lon == pytest.approx(expected_lon, rel=1e-3)
-    assert lat == pytest.approx(1.0)
-    assert [s[0] for s in item.samples] == list(range(0, 86401, 3600))
-    assert result.summary == {"floating": 1, "captured": 0, "beached": 0, "outside": 0}
-    assert result.total_seconds == 86400
-
-
-def test_item_beaches_on_land_and_freezes():
-    field = uniform_field(u=0.5, land_from_lon=0.79)  # land cells start at lon 0.8333
-    result = one(Litter("a", "bag", 0.5, 1.0), field, days=2)
-    item = result.items[0]
-    assert item.final_status == "beached"
-    assert 0 < item.status_changed_at_seconds < 2 * 86400
-    frozen = [s for s in item.samples if s[0] >= item.status_changed_at_seconds]
-    assert len(frozen) > 1
-    assert all(s[3] == "beached" for s in frozen)
-    assert len({(s[1], s[2]) for s in frozen}) == 1
-    assert result.summary["beached"] == 1
-
-
-def test_item_is_captured_once_by_collector_in_its_path():
-    collector = Collector("c1", 0.7, 1.0, 10_000.0)
-    result = one(Litter("a", "foam", 0.5, 1.0), uniform_field(u=0.5), [collector])
-    item = result.items[0]
-    assert item.final_status == "captured"
-    assert item.captured_by == "c1"
-    assert result.captured_counts == {"c1": 1}
-    assert result.summary == {"floating": 0, "captured": 1, "beached": 0, "outside": 0}
-    frozen = [s for s in item.samples if s[0] >= item.status_changed_at_seconds]
-    assert len({(s[1], s[2]) for s in frozen}) == 1
-
-
-def test_item_dropped_inside_collector_is_captured_at_second_zero():
-    # Review Focus 2.
-    collector = Collector("c1", 0.5, 1.0, 10_000.0)
-    result = one(Litter("a", "bottle", 0.51, 1.0), uniform_field(u=0.5), [collector])
-    item = result.items[0]
-    assert item.samples[0] == (0, 0.51, 1.0, "captured")
-    assert item.status_changed_at_seconds == 0
-    assert item.samples[-1][1:3] == (0.51, 1.0)
-    assert result.captured_counts == {"c1": 1}
-
-
-def test_item_leaving_the_box_becomes_outside():
-    result = one(Litter("a", "bottle", 1.0, 1.9), uniform_field(v=0.5))
-    item = result.items[0]
-    assert item.final_status == "outside"
-    assert item.status_changed_at_seconds < 86400
-
-
-def test_all_items_share_one_timeline_but_follow_their_own_field():
-    east = Litter("east", "bottle", 0.5, 1.0)
-    north = Litter("north", "bag", 20.5, 31.0)
-    fields = {"east": uniform_field(u=0.2), "north": uniform_field(v=0.2, lon0=20.0, lat0=30.0)}
-    result = run([east, north], [], 1, fields)
-    a, b = result.items
-    assert [s[0] for s in a.samples] == [s[0] for s in b.samples]
-    assert a.samples[-1][1] > 0.5 and a.samples[-1][2] == pytest.approx(1.0)
-    assert b.samples[-1][2] > 31.0 and b.samples[-1][1] == pytest.approx(20.5)
-
-
-def test_run_without_litter_returns_zero_counts():
-    result = run([], [Collector("c1", 0.0, 0.0, 10_000.0)], 3, {})
-    assert result.items == []
-    assert result.summary == {"floating": 0, "captured": 0, "beached": 0, "outside": 0}
-    assert result.captured_counts == {"c1": 0}
-    assert result.total_seconds == 3 * 86400
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `python -m pytest tests/test_engine.py -q`
-Expected: collection error, `ModuleNotFoundError: No module named 'app.sim.engine'`.
-
-- [ ] **Step 3: Implement the engine**
-
-Create `backend/app/sim/engine.py`:
-
-```python
-import math
-from dataclasses import dataclass
-
-from .. import config
-from . import geo
-from .snapshot import Field
-
-STATUSES = ("floating", "captured", "beached", "outside")
-
-
-@dataclass
-class Litter:
-    id: str
-    type: str
-    lon: float
-    lat: float
-
-
-@dataclass
-class Collector:
-    id: str
-    lon: float
-    lat: float
-    radius_m: float
-
-
-@dataclass
-class ItemResult:
-    id: str
-    type: str
-    final_status: str
-    captured_by: str | None
-    status_changed_at_seconds: int | None
-    samples: list  # (time_seconds, lon, lat, status)
-
-
-@dataclass
-class RunResult:
-    items: list
-    captured_counts: dict
-    summary: dict
-    total_seconds: int
-
-
-def _classify(lon: float, lat: float, fld: Field, collectors: list) -> tuple:
-    """Outside is checked first so an out-of-box point is never read as a clipped land cell."""
-    if not fld.contains(lon, lat):
-        return "outside", None
-    if fld.is_land(lon, lat):
-        return "beached", None
-    for c in collectors:
-        if geo.haversine_m(lon, lat, c.lon, c.lat) <= c.radius_m:
-            return "captured", c.id
-    return "floating", None
-
-
-def run(litter: list, collectors: list, duration_days: int, fields: dict) -> RunResult:
-    """Advect every item for the same duration, each through its own field. Deterministic."""
-    dt = config.DT_SECONDS
-    total_seconds = duration_days * 86400
-    steps = total_seconds // dt
-    sample_every = config.SAMPLE_INTERVAL_SECONDS // dt
-
-    captured_counts = {c.id: 0 for c in collectors}
-    summary = {status: 0 for status in STATUSES}
-    items = []
-
-    for item in litter:
-        fld = fields[item.id]
-        factor = config.DRIFT_FACTOR[item.type]
-        lon, lat = item.lon, item.lat
-        status, captured_by = _classify(lon, lat, fld, collectors)
-        changed_at = 0 if status != "floating" else None
-        samples = [(0, lon, lat, status)]
-
-        for step in range(1, steps + 1):
-            t = step * dt
-            if status == "floating":
-                u, v = fld.sample(lon, lat, t - dt)
-                cos_lat = max(math.cos(math.radians(lat)), 0.01)
-                lon = lon + u * factor * dt / (geo.M_PER_DEG_LON_EQUATOR * cos_lat)
-                lat = lat + v * factor * dt / geo.M_PER_DEG_LAT
-                status, captured_by = _classify(lon, lat, fld, collectors)
-                if status != "floating":
-                    changed_at = t
-            if step % sample_every == 0:
-                samples.append((t, lon, lat, status))
-
-        if captured_by is not None:
-            captured_counts[captured_by] += 1
-        summary[status] += 1
-        items.append(ItemResult(item.id, item.type, status, captured_by, changed_at, samples))
-
-    return RunResult(items, captured_counts, summary, total_seconds)
-```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `python -m pytest tests/test_engine.py -q`
-Expected: 7 passed.
-
-- [ ] **Step 5: Run the whole suite and commit**
-
-Run: `python -m pytest -q`
-Expected: 37 passed.
-
-```bash
-git add app/sim/engine.py tests/test_engine.py
-git commit -m "feat(backend): drift engine with beached, captured and outside states"
-```
-
-Known cost, accepted for the MVP: the loop is plain Python, about 30 microseconds per step per item. The worst case of 50 items for 30 days is roughly 6 seconds; a typical run of 5 items for 7 days is well under half a second. Vectorising across items is the upgrade if this ever matters.
-
----
-
-### Task 4: Service layer and the simulate, compare and currents endpoints
-
-After this task the frontend can integrate for real. Data is synthetic until Task 5.
-
-**Files:**
-- Create: `backend/app/service.py`
-- Modify: `backend/app/routes.py` (add three endpoints and the on-land error response)
-- Test: `backend/tests/test_api.py`
-
-**Interfaces:**
-- Consumes: everything produced by Tasks 1 to 3.
-- Produces:
-  - `service.OnLandError(placement_id: str)` with attribute `.placement_id`.
-  - `service.current_slice_time() -> datetime` (UTC now floored to the hour).
-  - `service.resolve_field(key: SnapshotKey) -> Field`. **This is the seam.** Task 4 returns a synthetic field; Tasks 5 and 6 replace its body. Tests monkeypatch it.
-  - `service.resolve_fields(req: SimulateRequest, slice_time: datetime) -> dict[str, Field]` (raises `OnLandError`).
-  - `service.persist(response, req, fields, slice_time, parent_run_id) -> bool`. Task 4 returns `False`; Task 6 replaces its body.
-  - `service.simulate(req, *, use_collectors=True, fields=None, slice_time=None, parent_run_id=None) -> SimulateResponse`.
-  - `service.compare(req) -> CompareResponse`.
-  - `service.currents(lon: float, lat: float, duration_days: int) -> CurrentsResponse`.
-  - `service.snapshot_info(fld: Field) -> SnapshotInfo`.
-  - HTTP: `POST /api/simulate`, `POST /api/compare`, `GET /api/currents?lon=&lat=&durationDays=`.
-
-- [ ] **Step 1: Write the failing tests**
-
-Create `backend/tests/test_api.py`:
-
-```python
-import pytest
-from fastapi.testclient import TestClient
-
-from app import service
-from app.main import app
-from tests.helpers import uniform_field
-
-client = TestClient(app)
-
-BOTTLE = {"id": "bottle-1", "type": "bottle", "coordinates": [0.5, 1.0]}
-COLLECTOR = {"id": "collector-1", "type": "collector", "coordinates": [0.7, 1.0]}
-
-
-@pytest.fixture
-def eastward(monkeypatch):
-    fld = uniform_field(u=0.5)
-    monkeypatch.setattr(service, "resolve_field", lambda key: fld)
-    return fld
-
-
-def test_simulate_returns_the_frontend_trajectory_shape():
-    body = {"placements": [{"id": "bottle-1", "type": "bottle", "coordinates": [10.2, -20.1]}],
-            "durationDays": 2}
-    response = client.post("/api/simulate", json=body)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["durationDays"] == 2
-    assert data["totalSeconds"] == 172800
-    assert data["sampleIntervalSeconds"] == 3600
-    trajectory = data["trajectories"][0]
-    assert trajectory["id"] == "bottle-1" and trajectory["type"] == "bottle"
-    assert len(trajectory["samples"]) == 49
-    assert trajectory["samples"][0] == {"timeSeconds": 0, "coordinates": [10.2, -20.1], "status": "floating"}
-    assert sum(data["summary"].values()) == 1
-    assert data["snapshots"][0]["source"] == "synthetic"
-    assert data["persisted"] is False
-    assert data["attribution"]["limitations"]
-
-
-@pytest.mark.parametrize("placements", [[], [COLLECTOR]])
-def test_simulate_with_no_litter_returns_empty_result(placements):
-    # Review Focus 1.
-    response = client.post("/api/simulate", json={"placements": placements})
-    assert response.status_code == 200
-    data = response.json()
-    assert data["trajectories"] == []
-    assert data["summary"] == {"floating": 0, "captured": 0, "beached": 0, "outside": 0}
-    assert data["snapshots"] == []
-
-
-def test_drop_on_land_is_rejected_with_code(monkeypatch):
-    fld = uniform_field(u=0.1, land_from_lon=1.49)
-    monkeypatch.setattr(service, "resolve_field", lambda key: fld)
-    body = {"placements": [{"id": "bag-9", "type": "bag", "coordinates": [1.8, 1.0]}]}
-    response = client.post("/api/simulate", json=body)
-    assert response.status_code == 422
-    assert response.json() == {
-        "code": "on_land",
-        "message": "That spot is land. Try the water!",
-        "placementId": "bag-9",
-    }
-
-
-def test_invalid_duration_is_rejected():
-    response = client.post("/api/simulate", json={"placements": [BOTTLE], "durationDays": 31})
-    assert response.status_code == 422
-
-
-def test_simulate_is_deterministic(eastward):
-    body = {"placements": [BOTTLE], "durationDays": 1}
-    first = client.post("/api/simulate", json=body).json()
-    second = client.post("/api/simulate", json=body).json()
-    assert first["trajectories"] == second["trajectories"]
-    assert first["runId"] != second["runId"]
-
-
-def test_compare_runs_without_and_with_collectors_on_the_same_snapshot(eastward):
-    body = {"placements": [BOTTLE, COLLECTOR], "durationDays": 1}
-    response = client.post("/api/compare", json=body)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["without"]["summary"]["floating"] == 1
-    assert data["without"]["collectors"] == []
-    assert data["with"]["summary"]["captured"] == 1
-    assert data["with"]["collectors"][0] == {
-        "id": "collector-1", "coordinates": [0.7, 1.0], "radiusM": 10000.0, "capturedCount": 1,
-    }
-    assert data["delta"] == {"floating": -1, "captured": 1, "beached": 0, "outside": 0}
-    assert data["without"]["snapshots"] == data["with"]["snapshots"]
-    assert data["with"]["items"][0]["capturedBy"] == "collector-1"
-
-
-def test_currents_returns_downsampled_arrows():
-    response = client.get("/api/currents", params={"lon": 10.2, "lat": -20.1, "durationDays": 1})
-    assert response.status_code == 200
-    data = response.json()
-    assert 0 < len(data["arrows"]) <= 400
-    assert all(0.0 <= a["bearing"] < 360.0 for a in data["arrows"])
-    assert data["bounds"][0] == pytest.approx([8.5, -21.5])
-    assert data["bounds"][1] == pytest.approx([11.5, -18.5], abs=0.1)
-    assert data["snapshot"]["source"] == "synthetic"
-
-
-@pytest.mark.parametrize("u,v,bearing", [(0.5, 0.0, 90.0), (0.0, 0.5, 0.0), (-0.5, 0.0, 270.0)])
-def test_arrow_bearing_is_degrees_clockwise_from_north(monkeypatch, u, v, bearing):
-    fld = uniform_field(u=u, v=v)
-    monkeypatch.setattr(service, "resolve_field", lambda key: fld)
-    data = client.get("/api/currents", params={"lon": 1.0, "lat": 1.0}).json()
-    assert data["arrows"][0]["bearing"] == pytest.approx(bearing)
-    assert data["arrows"][0]["speed"] == pytest.approx(0.5)
-
-
-def test_currents_rejects_out_of_range_coordinates():
-    assert client.get("/api/currents", params={"lon": 200, "lat": 0}).status_code == 422
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `python -m pytest tests/test_api.py -q`
-Expected: `ImportError: cannot import name 'service' from 'app'`.
-
-- [ ] **Step 3: Implement the service**
-
-Create `backend/app/service.py`:
-
-```python
-import math
-import uuid
-from datetime import datetime, timezone
-
-from . import config
-from .schemas import (
-    Arrow, Attribution, CollectorSummary, CompareResponse, CurrentsResponse, ItemSummary,
-    ParticleTrajectory, SimulateRequest, SimulateResponse, SnapshotInfo, StatusCounts,
-    TrajectorySample,
-)
-from .sim import engine
-from .sim.snapshot import Field, SnapshotKey, key_for, synthetic_field
-
-MAX_ARROWS_PER_SIDE = 16
-
-
-class OnLandError(Exception):
-    def __init__(self, placement_id: str):
-        super().__init__(placement_id)
-        self.placement_id = placement_id
-
-
-def attribution() -> Attribution:
-    return Attribution(source=config.ATTRIBUTION_SOURCE, dataset=config.DATASET_ID,
-                       limitations=config.LIMITATIONS)
-
-
-def current_slice_time() -> datetime:
-    return datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
-
-
-def resolve_field(key: SnapshotKey) -> Field:
-    """Return the currents for one box. Task 4: synthetic only."""
-    return synthetic_field(key)
-
-
-def resolve_fields(req: SimulateRequest, slice_time: datetime) -> dict:
-    """One field per litter placement; placements that share a box share a field."""
-    by_key: dict = {}
-    fields: dict = {}
-    for p in req.placements:
-        if p.type == "collector":
-            continue
-        lon, lat = p.coordinates
-        key = key_for(lon, lat, req.duration_days, slice_time)
-        if key not in by_key:
-            by_key[key] = resolve_field(key)
-        fld = by_key[key]
-        if fld.contains(lon, lat) and fld.is_land(lon, lat):
-            raise OnLandError(p.id)
-        fields[p.id] = fld
-    return fields
-
-
-def snapshot_info(fld: Field) -> SnapshotInfo:
-    return SnapshotInfo(snapshot_id=fld.snapshot_id, source=fld.source,
-                        slice_time=fld.slice_time, n_slices=int(fld.u.shape[0]))
-
-
-def persist(response: SimulateResponse, req: SimulateRequest, fields: dict,
-            slice_time: datetime, parent_run_id: str | None) -> bool:
-    """Store the run. Task 4: no database yet."""
-    return False
-
-
-def simulate(req: SimulateRequest, *, use_collectors: bool = True, fields: dict | None = None,
-             slice_time: datetime | None = None, parent_run_id: str | None = None) -> SimulateResponse:
-    slice_time = slice_time or current_slice_time()
-    if fields is None:
-        fields = resolve_fields(req, slice_time)
-
-    litter = [engine.Litter(p.id, p.type, p.coordinates[0], p.coordinates[1])
-              for p in req.placements if p.type != "collector"]
-    collectors = [engine.Collector(p.id, p.coordinates[0], p.coordinates[1], req.collector_radius_m)
-                  for p in req.placements if p.type == "collector"] if use_collectors else []
-
-    result = engine.run(litter, collectors, req.duration_days, fields)
-
-    unique_fields = {fld.snapshot_id: fld for fld in fields.values()}
-    response = SimulateResponse(
-        run_id=str(uuid.uuid4()),
-        duration_days=req.duration_days,
-        total_seconds=result.total_seconds,
-        sample_interval_seconds=config.SAMPLE_INTERVAL_SECONDS,
-        trajectories=[
-            ParticleTrajectory(id=item.id, type=item.type, samples=[
-                TrajectorySample(time_seconds=t, coordinates=(round(lon, 5), round(lat, 5)), status=status)
-                for t, lon, lat, status in item.samples
-            ]) for item in result.items
-        ],
-        items=[ItemSummary(id=item.id, type=item.type, final_status=item.final_status,
-                           captured_by=item.captured_by,
-                           status_changed_at_seconds=item.status_changed_at_seconds)
-               for item in result.items],
-        collectors=[CollectorSummary(id=c.id, coordinates=(c.lon, c.lat), radius_m=c.radius_m,
-                                     captured_count=result.captured_counts[c.id])
-                    for c in collectors],
-        summary=StatusCounts(**result.summary),
-        snapshots=[snapshot_info(fld) for fld in unique_fields.values()],
-        attribution=attribution(),
-        persisted=False,
-    )
-    response.persisted = persist(response, req, fields, slice_time, parent_run_id)
-    return response
-
-
-def compare(req: SimulateRequest) -> CompareResponse:
-    """Same placements, same snapshots: once ignoring collectors, once honouring them."""
-    slice_time = current_slice_time()
-    fields = resolve_fields(req, slice_time)
-    without = simulate(req, use_collectors=False, fields=fields, slice_time=slice_time)
-    with_ = simulate(req, use_collectors=True, fields=fields, slice_time=slice_time,
-                     parent_run_id=without.run_id)
-    delta = StatusCounts(**{
-        status: getattr(with_.summary, status) - getattr(without.summary, status)
-        for status in engine.STATUSES
-    })
-    return CompareResponse(without=without, with_=with_, delta=delta)
-
-
-def currents(lon: float, lat: float, duration_days: int) -> CurrentsResponse:
-    fld = resolve_field(key_for(lon, lat, duration_days, current_slice_time()))
-    stride = max(1, math.ceil(max(fld.lon.size, fld.lat.size) / MAX_ARROWS_PER_SIDE))
-    arrows = []
-    for j in range(0, fld.lat.size, stride):
-        for i in range(0, fld.lon.size, stride):
-            u, v = float(fld.u[0, j, i]), float(fld.v[0, j, i])
-            if math.isnan(u) or math.isnan(v):
-                continue
-            arrows.append(Arrow(
-                coordinates=(round(float(fld.lon[i]), 4), round(float(fld.lat[j]), 4)),
-                u=round(u, 4), v=round(v, 4),
-                speed=round(math.hypot(u, v), 4),
-                bearing=round(math.degrees(math.atan2(u, v)) % 360.0, 1) % 360.0,
-            ))
-    return CurrentsResponse(
-        snapshot=snapshot_info(fld),
-        bounds=((float(fld.lon[0]), float(fld.lat[0])), (float(fld.lon[-1]), float(fld.lat[-1]))),
-        arrows=arrows,
-    )
-```
-
-- [ ] **Step 4: Add the endpoints**
-
-Replace `backend/app/routes.py` with:
-
-```python
-from fastapi import APIRouter, Query
-from fastapi.responses import JSONResponse
-
-from . import config, service
-from .schemas import (
-    CompareResponse, CurrentsResponse, MetaResponse, SimulateRequest, SimulateResponse,
-)
-
-router = APIRouter()
-
-# Kept as a module-level name because scripts/make_fixture.py imports it from here.
-attribution = service.attribution
-
-
-def on_land_response(err: service.OnLandError) -> JSONResponse:
-    return JSONResponse(status_code=422, content={
-        "code": "on_land",
-        "message": "That spot is land. Try the water!",
-        "placementId": err.placement_id,
-    })
-
-
-@router.get("/health")
-def health() -> dict:
-    return {"status": "ok", "db": False}
-
-
-@router.get("/meta", response_model=MetaResponse)
-def meta() -> MetaResponse:
-    return MetaResponse(
-        min_duration_days=config.MIN_DAYS,
-        max_duration_days=config.MAX_DAYS,
-        default_duration_days=config.DEFAULT_DAYS,
-        sample_interval_seconds=config.SAMPLE_INTERVAL_SECONDS,
-        default_collector_radius_m=config.DEFAULT_COLLECTOR_RADIUS_M,
-        litter_types=list(config.DRIFT_FACTOR),
-        attribution=service.attribution(),
-    )
-
-
-@router.get("/currents", response_model=CurrentsResponse)
-def currents(
-    lon: float = Query(ge=-180, le=180),
-    lat: float = Query(ge=-90, le=90),
-    duration_days: int = Query(config.DEFAULT_DAYS, alias="durationDays",
-                               ge=config.MIN_DAYS, le=config.MAX_DAYS),
-):
-    return service.currents(lon, lat, duration_days)
-
-
-@router.post("/simulate", response_model=SimulateResponse)
-def simulate(req: SimulateRequest):
-    try:
-        return service.simulate(req)
-    except service.OnLandError as err:
-        return on_land_response(err)
-
-
-@router.post("/compare", response_model=CompareResponse)
-def compare(req: SimulateRequest):
-    try:
-        return service.compare(req)
-    except service.OnLandError as err:
-        return on_land_response(err)
-```
-
-- [ ] **Step 5: Run tests to verify they pass**
-
-Run: `python -m pytest -q`
-Expected: 49 passed.
-
-- [ ] **Step 6: Try it by hand**
-
-Run: `python -m uvicorn app.main:app --port 8000 --reload`, then in another terminal:
-
-```bash
-curl -s -X POST http://localhost:8000/api/compare -H "Content-Type: application/json" \
-  -d '{"placements":[{"id":"bottle-1","type":"bottle","coordinates":[-140.2,32.1]},{"id":"collector-1","type":"collector","coordinates":[-140.0,32.1]}],"durationDays":7}' \
-  | python -c "import sys,json; d=json.load(sys.stdin); print(d['delta'], d['with']['snapshots'])"
-```
-
-Expected: a delta object and one snapshot with `"source": "synthetic"`.
-
-- [ ] **Step 7: Commit and tell Person 1**
-
-```bash
-git add app/service.py app/routes.py tests/test_api.py
-git commit -m "feat(backend): simulate, compare and currents endpoints on synthetic currents"
-```
-
-Tell Person 1 the backend runs on `http://localhost:8000` and that `VITE_API_BASE_URL` should point there. `POST /api/simulate` returns `trajectories` in their `ParticleTrajectory[]` type.
-
----
-
-### Task 5: Real currents from Copernicus Marine, with timeout and fallback
-
-**Prerequisite (human):** `backend/.env` contains `COPERNICUSMARINE_SERVICE_USERNAME` and `COPERNICUSMARINE_SERVICE_PASSWORD`.
-
-**Files:**
-- Create: `backend/app/sim/copernicus.py`, `backend/scripts/smoke_copernicus.py`
-- Modify: `backend/requirements.txt` (add one line), `backend/app/service.py` (replace `resolve_field`, add cache and timeout), `backend/tests/conftest.py` (block the network in every test)
-- Test: `backend/tests/test_copernicus.py`
-
-**Interfaces:**
-- Consumes: `SnapshotKey`, `box_bounds`, `build_field`, `COMPONENT_NAMES`, `synthetic_field`, `config.DATASET_ID`, `config.FETCH_TIMEOUT_S`.
-- Produces:
-  - `copernicus.fetch_field(key: SnapshotKey) -> Field` (network; raises on any failure).
-  - `copernicus.field_from_dataset(ds, key: SnapshotKey) -> Field` (pure; takes an xarray Dataset).
-  - `service._memory: dict[SnapshotKey, Field]` (bounded in-process cache, real snapshots only).
-  - `service.fetch_with_timeout(key) -> Field | None`.
-  - `service.resolve_field(key)` now: memory, then Copernicus, then synthetic.
-
-- [ ] **Step 1: Install the toolbox**
-
-Append to `backend/requirements.txt`:
-
-```
-copernicusmarine>=2.0
-```
-
-Run: `pip install -r requirements.txt`
-Expected: installs `copernicusmarine` and `xarray`. If the install fails on Python 3.13, recreate the venv with 3.12 (`py -3.12 -m venv .venv`), reinstall, and rerun the suite before continuing.
-
-- [ ] **Step 2: Block the network in tests**
-
-Replace `backend/tests/conftest.py` with:
-
-```python
-import os
-
-import pytest
-
-# Tests never touch a real database. Set before any app import;
-# load_dotenv does not override variables that already exist.
-os.environ["DATABASE_URL"] = ""
+import pytest  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def offline(monkeypatch):
-    """No test may reach Copernicus. Fetches fail, so the service falls back to synthetic."""
-    from app import service
-    from app.sim import copernicus
+def isolated(monkeypatch):
+    """No test reaches Copernicus; every test starts with empty caches."""
+    from app import routes
+    from app.sim import snapshot
 
     def refuse(key):
         raise RuntimeError("network disabled in tests")
 
-    monkeypatch.setattr(copernicus, "fetch_field", refuse)
-    service._memory.clear()
+    monkeypatch.setattr(snapshot, "fetch_copernicus", refuse)
+    snapshot._cache.clear()
+    routes._runs.clear()
 ```
 
-- [ ] **Step 3: Write the failing tests**
+- [ ] **Step 3: Pin the edge cases**
+
+Create `backend/tests/test_hardening.py`:
+
+```python
+from datetime import UTC, datetime
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import app
+from app.sim import engine
+from app.sim.snapshot import make_key, synthetic_field
+
+client = TestClient(app)
+T0 = datetime(2026, 10, 3, 18, tzinfo=UTC)
+LON, LAT = -130.0, 40.0
+
+
+def bottle(pid, coordinates=(LON, LAT)):
+    return {"id": pid, "type": "bottle", "coordinates": list(coordinates)}
+
+
+def test_item_dropped_inside_collector_is_captured_at_second_zero():
+    fld = synthetic_field(make_key(LON, LAT, 1, T0), uniform=(0.5, 0.0))
+    collector = engine.Collector("c1", LON, LAT, 10_000)
+    item = engine.LitterItem("b", "bottle", LON + 0.01, LAT)
+    result = engine.run([item], [collector], 1, {"b": fld})
+    out = result.outcomes[0]
+    assert out.samples[0][3] == "captured"
+    assert out.status_changed_at_seconds == 0
+    assert out.samples[-1][1] == pytest.approx(LON + 0.01)  # never moved
+    assert result.captured_counts == {"c1": 1}
+
+
+def test_sampling_beside_land_is_finite_and_slowed():
+    # Land starts at the grid column just east of LON + 0.25.
+    fld = synthetic_field(make_key(LON, LAT, 1, T0), uniform=(0.5, 0.5),
+                          land=lambda lon, lat: lon > LON + 0.26)
+    u, v = fld.sample(LON + 0.25 + 0.6 / 12, LAT)  # 60% of the way from a water cell to a land cell
+    assert u == pytest.approx(0.2, abs=0.01)
+    assert v == pytest.approx(0.2, abs=0.01)
+
+
+def test_box_at_the_antimeridian_contains_both_sides():
+    fld = synthetic_field(make_key(179.9, 0.0, 1, T0), uniform=(0.5, 0.0))
+    assert fld.contains(179.9, 0.0)
+    assert fld.contains(-179.9, 0.0)
+    assert fld.sample(-179.9, 0.0) == pytest.approx((0.5, 0.0))
+
+
+def test_item_drifts_across_the_antimeridian_without_jumping():
+    fld = synthetic_field(make_key(179.9, 0.0, 1, T0), uniform=(0.5, 0.0))
+    out = engine.drift_item(engine.LitterItem("b", "bottle", 179.95, 0.0), fld, [], 1)
+    assert out.final_status == "floating"
+    assert out.samples[-1][1] == pytest.approx(180.338, abs=0.01)  # continuous, not wrapped to -179.66
+
+
+@pytest.mark.parametrize("body", [
+    {"placements": [bottle("a"), bottle("a")]},                                  # duplicate ids
+    {"placements": [bottle("a", (0, 91))]},                                       # latitude out of range
+    {"placements": [bottle("a", (181, 0))]},                                      # longitude out of range
+    {"placements": [{"id": "c", "type": "collector", "coordinates": [0, 0]}]},    # no litter
+    {"placements": []},                                                           # nothing at all
+    {"placements": [bottle(f"b{i}") for i in range(51)]},                         # too many
+    {"placements": [bottle("a")], "durationDays": 1.5},                           # fractional days
+    {"placements": [bottle("a")], "durationDays": 0},
+])
+def test_bad_requests_are_rejected_before_any_work(body):
+    response = client.post("/api/simulate", json=body)
+    assert response.status_code == 422
+    assert response.json()["code"] == "invalid_request"
+```
+
+- [ ] **Step 4: Run the whole suite**
+
+Run: `.venv/Scripts/python -m pytest -q`
+Expected: 25 passed. These are pins on existing behaviour, so they pass immediately. If one fails, the existing code has a real bug: fix it in the module that owns it before going on.
+
+- [ ] **Step 5: Commit the baseline**
+
+From the repo root:
+
+```bash
+git add .gitignore backend/pyproject.toml backend/README.md backend/app backend/scripts backend/tests
+git status --short   # confirm no .env, .venv, caches or egg-info are staged
+git commit -m "feat(backend): phase 0 and 1 - contract, fixtures, engine, endpoints on synthetic currents"
+```
+
+---
+
+### Task 2: Real currents from Copernicus Marine
+
+**Prerequisite (human):** `backend/.env` contains `COPERNICUSMARINE_SERVICE_USERNAME` and `COPERNICUSMARINE_SERVICE_PASSWORD`. Only the manual smoke step needs them.
+
+**Files:**
+- Modify: `backend/app/config.py` (one constant), `backend/app/sim/snapshot.py` (replace the `fetch_copernicus` stub and the cache section)
+- Create: `backend/scripts/smoke_copernicus.py`
+- Test: `backend/tests/test_copernicus.py`
+
+**Interfaces:**
+- Consumes: `SnapshotKey`, `Field`, `COMPONENTS`, `synthetic_field`, `config.COPERNICUS_DATASET_ID`, `config.COPERNICUS_TIMEOUT_S`.
+- Produces (all in `app.sim.snapshot`):
+  - `fetch_bounds(key) -> tuple[float, float, float, float]` as `(west, south, east, north)`, clamped to the map.
+  - `field_from_dataset(ds, key) -> Field` (pure; `ds` is an xarray Dataset).
+  - `fetch_copernicus(key) -> Field` (network; raises on any failure).
+  - `load_field(key) -> Field`, same signature as before. Real fields are cached for the process lifetime; a synthetic fallback is reused for `config.SYNTHETIC_RETRY_S` seconds and then the real source is retried.
+  - `_cache: dict[SnapshotKey, tuple[Field, float | None]]` and `_remember(key, fld, ttl=None) -> Field`, `_cached(key) -> Field | None`, `_fetch_with_timeout(key) -> Field | None` (Task 4 reuses these).
+
+- [ ] **Step 1: Write the failing tests**
 
 Create `backend/tests/test_copernicus.py`:
 
@@ -1619,32 +240,33 @@ Create `backend/tests/test_copernicus.py`:
 import sys
 import time
 import types
+from datetime import UTC, datetime
 
 import numpy as np
 import pytest
 import xarray as xr
 
-from app import config, service
-from app.sim import copernicus
-from app.sim.copernicus import fetch_field as real_fetch_field  # captured before the autouse patch
-from app.sim.snapshot import COMPONENT_NAMES, key_for
-from tests.helpers import T0, uniform_field
+from app import config
+from app.sim import snapshot
+from app.sim.snapshot import COMPONENTS, field_from_dataset, load_field, make_key, synthetic_field
+from app.sim.snapshot import fetch_copernicus as real_fetch  # captured before the autouse patch
 
-KEY = key_for(10.2, -20.1, 1, T0)  # centre (10.0, -20.0), half-width 1.5
+T0 = datetime(2026, 10, 3, 18, tzinfo=UTC)
+KEY = make_key(10.2, -20.1, 1, T0)  # centre (10.0, -20.0), half-width 1.5
 
 
-def fake_dataset() -> xr.Dataset:
-    """Three hourly slices around T0, one depth level, latitude descending like some servers return."""
+def fake_dataset(lon=(9.0, 10.0, 11.0)) -> xr.Dataset:
+    """Three hourly slices around T0, one depth level, latitude descending."""
     times = np.array(["2026-10-03T17:00", "2026-10-03T18:00", "2026-10-03T19:00"], dtype="datetime64[ns]")
     lat = np.array([-19.0, -20.0, -21.0])
-    lon = np.array([9.0, 10.0, 11.0])
-    shape = (3, 1, 3, 3)
+    lon = np.array(lon)
+    shape = (3, 1, lat.size, lon.size)
     data = {}
-    for name in COMPONENT_NAMES:
+    for name in COMPONENTS:
         values = np.zeros(shape, dtype="float32")
         if name == "uo":
-            values[0], values[1], values[2] = 0.1, 0.2, 0.3  # differs per time slice
-            values[:, :, 0, 0] = np.nan                       # land at lat -19, lon 9
+            values[0], values[1], values[2] = 0.1, 0.2, 0.3  # differs per hour
+            values[:, :, 0, 0] = np.nan                       # land at lat -19, first lon
         if name == "ustokes":
             values[:] = 0.05
         if name == "utide":
@@ -1653,17 +275,30 @@ def fake_dataset() -> xr.Dataset:
     return xr.Dataset(data, coords={"time": times, "depth": [0.49], "latitude": lat, "longitude": lon})
 
 
+def real_field(key=KEY):
+    fld = synthetic_field(key, uniform=(0.2, 0.0))
+    fld.source = "copernicus"
+    return fld
+
+
 def test_field_from_dataset_picks_nearest_hour_and_combines_components():
-    fld = copernicus.field_from_dataset(fake_dataset(), KEY)
-    assert fld.source == "copernicus"
-    assert fld.u.shape == (1, 3, 3)
-    assert fld.lat[0] < fld.lat[-1]                    # flipped to ascending
-    assert fld.u[0, 0, 1] == pytest.approx(0.25)       # 18:00 slice: uo 0.2 + stokes 0.05, tide ignored
-    assert np.isnan(fld.u[0, 2, 0])                    # the land cell, now in the last row
-    assert fld.slice_time == T0
+    fld = field_from_dataset(fake_dataset(), KEY)
+    assert fld.source == "copernicus" and fld.key == KEY
+    assert (fld.nx, fld.ny) == (3, 3)
+    assert fld.lat[0] < fld.lat[-1]                              # flipped to ascending
+    assert fld.sample(10.0, -20.0)[0] == pytest.approx(0.25)     # 18:00 slice: 0.2 + stokes 0.05, no tide
+    assert fld.is_land(9.0, -19.0)
+    assert not fld.is_land(10.0, -20.0)
+    assert fld.components["utide"].shape == (1, 3, 3)
+    assert float(fld.components["utide"][0, 1, 1]) == 9.0        # tide kept for later, not applied
 
 
-def test_fetch_field_requests_the_box_and_dataset(monkeypatch):
+def test_field_from_dataset_rejects_an_empty_grid():
+    with pytest.raises(ValueError):
+        field_from_dataset(fake_dataset(lon=(10.0,)), KEY)
+
+
+def test_fetch_requests_the_box_the_hour_and_the_dataset(monkeypatch):
     calls = {}
 
     def open_dataset(**kwargs):
@@ -1671,234 +306,267 @@ def test_fetch_field_requests_the_box_and_dataset(monkeypatch):
         return fake_dataset()
 
     monkeypatch.setitem(sys.modules, "copernicusmarine", types.SimpleNamespace(open_dataset=open_dataset))
-    fld = real_fetch_field(KEY)
+    fld = real_fetch(KEY)
     assert fld.source == "copernicus"
-    assert calls["dataset_id"] == config.DATASET_ID
-    assert calls["variables"] == list(COMPONENT_NAMES)
+    assert calls["dataset_id"] == config.COPERNICUS_DATASET_ID
+    assert calls["variables"] == list(COMPONENTS)
     assert (calls["minimum_longitude"], calls["maximum_longitude"]) == (8.5, 11.5)
     assert (calls["minimum_latitude"], calls["maximum_latitude"]) == (-21.5, -18.5)
     assert calls["start_datetime"] == "2026-10-03T17:00:00"
     assert calls["end_datetime"] == "2026-10-03T19:00:00"
 
 
-def test_resolve_field_falls_back_to_synthetic_and_does_not_cache_it():
-    fld = service.resolve_field(KEY)  # the autouse fixture makes the fetch fail
-    assert fld.source == "synthetic"
-    assert KEY not in service._memory
+def test_fetch_box_is_clamped_at_the_antimeridian_and_pole():
+    assert snapshot.fetch_bounds(make_key(179.9, 0.0, 1, T0)) == (178.5, -1.5, 180.0, 1.5)
+    assert snapshot.fetch_bounds(make_key(-179.9, 0.0, 1, T0)) == (-180.0, -1.5, -178.5, 1.5)
+    assert snapshot.fetch_bounds(make_key(0.0, 89.8, 1, T0))[3] == 90.0
 
 
-def test_resolve_field_caches_real_snapshots(monkeypatch):
-    real = uniform_field(u=0.2)
-    real.source = "copernicus"
+def test_failed_fetch_falls_back_to_synthetic_and_is_reused_briefly(monkeypatch):
     calls = []
+
+    def failing(key):
+        calls.append(key)
+        raise RuntimeError("down")
+
+    monkeypatch.setattr(snapshot, "fetch_copernicus", failing)
+    first = load_field(KEY)
+    assert first.source == "synthetic"
+    assert load_field(KEY) is first      # within the retry window: same field, no second fetch
+    assert len(calls) == 1
+
+
+def test_real_source_is_retried_after_the_window_and_recovers(monkeypatch):
+    monkeypatch.setattr(config, "SYNTHETIC_RETRY_S", 0)
+    assert load_field(KEY).source == "synthetic"            # the autouse fixture makes this fetch fail
+    recovered = real_field()
+    monkeypatch.setattr(snapshot, "fetch_copernicus", lambda key: recovered)
+    assert load_field(KEY) is recovered
+
+
+def test_real_snapshot_is_cached_for_the_process(monkeypatch):
+    calls = []
+    real = real_field()
 
     def fetch(key):
         calls.append(key)
         return real
 
-    monkeypatch.setattr(copernicus, "fetch_field", fetch)
-    assert service.resolve_field(KEY) is real
-    assert service.resolve_field(KEY) is real
+    monkeypatch.setattr(snapshot, "fetch_copernicus", fetch)
+    assert load_field(KEY) is real
+    assert load_field(KEY) is real
     assert len(calls) == 1
 
 
 def test_slow_fetch_times_out_to_synthetic(monkeypatch):
     def slow(key):
         time.sleep(0.5)
-        return uniform_field()
+        return real_field()
 
-    monkeypatch.setattr(copernicus, "fetch_field", slow)
-    monkeypatch.setattr(config, "FETCH_TIMEOUT_S", 0.05)
+    monkeypatch.setattr(snapshot, "fetch_copernicus", slow)
+    monkeypatch.setattr(config, "COPERNICUS_TIMEOUT_S", 0.05)
     started = time.monotonic()
-    fld = service.resolve_field(KEY)
-    assert fld.source == "synthetic"
+    assert load_field(KEY).source == "synthetic"
     assert time.monotonic() - started < 0.4
-
-
-def test_memory_cache_is_bounded(monkeypatch):
-    monkeypatch.setattr(service, "MEMORY_CACHE_MAX", 2)
-
-    def fetch(key):
-        fld = uniform_field()
-        fld.source = "copernicus"
-        return fld
-
-    monkeypatch.setattr(copernicus, "fetch_field", fetch)
-    for lon in (0.0, 10.0, 20.0):
-        service.resolve_field(key_for(lon, 0.0, 1, T0))
-    assert len(service._memory) == 2
-    assert key_for(0.0, 0.0, 1, T0) not in service._memory
 ```
 
-- [ ] **Step 4: Run tests to verify they fail**
+- [ ] **Step 2: Run tests to verify they fail**
 
-Run: `python -m pytest tests/test_copernicus.py -q`
-Expected: `ModuleNotFoundError: No module named 'app.sim.copernicus'` (or an `AttributeError` on `service._memory` from the fixture).
+Run: `.venv/Scripts/python -m pytest tests/test_copernicus.py -q`
+Expected: `ImportError: cannot import name 'field_from_dataset' from 'app.sim.snapshot'`.
 
-- [ ] **Step 5: Implement the fetch**
+- [ ] **Step 3: Implement the fetch**
 
-Create `backend/app/sim/copernicus.py`:
+In `backend/app/config.py`, add below `COPERNICUS_TIMEOUT_S = 20`:
 
 ```python
-"""The only module that talks to Copernicus Marine."""
-from datetime import timedelta
+SYNTHETIC_RETRY_S = 60  # a fallback field is reused this long before Copernicus is tried again
+```
 
-import numpy as np
+In `backend/app/sim/snapshot.py`, add `import time` to the imports, then replace the `fetch_copernicus` stub with:
 
-from .. import config
-from .snapshot import COMPONENT_NAMES, Field, SnapshotKey, box_bounds, build_field
+```python
+_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
-TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
+
+def fetch_bounds(key: SnapshotKey) -> tuple[float, float, float, float]:
+    """(west, south, east, north) to request, cut at the edge of the map.
+
+    A box that crosses the antimeridian is fetched only up to +/-180; an item that
+    reaches the cut becomes outside. Synthetic boxes are not cut.
+    """
+    hw = key.half_width_deg
+    return (
+        max(-180.0, key.centre_lon - hw),
+        max(-90.0, key.centre_lat - hw),
+        min(180.0, key.centre_lon + hw),
+        min(90.0, key.centre_lat + hw),
+    )
 
 
 def field_from_dataset(ds, key: SnapshotKey) -> Field:
     """Turn an xarray Dataset covering the box into a single-slice Field."""
     if "depth" in ds.dims:
         ds = ds.isel(depth=0)
-    target = np.datetime64(key.slice_time.replace(tzinfo=None))
+    target = np.datetime64(key.slice_time.astimezone(UTC).replace(tzinfo=None))
     ds = ds.sel(time=target, method="nearest").load()
-    components = {
-        name: ds[name].transpose("latitude", "longitude").values[None, :, :]
-        for name in COMPONENT_NAMES
+    lon = ds["longitude"].values.astype("float64")
+    lat = ds["latitude"].values.astype("float64")
+    if lon.size < 2 or lat.size < 2:
+        raise ValueError(f"Copernicus returned no usable grid for {key}")
+    layers = {
+        name: ds[name].transpose("latitude", "longitude").values.astype(np.float32) for name in COMPONENTS
     }
-    return build_field(ds["longitude"].values, ds["latitude"].values, components,
-                       key.slice_time, "copernicus")
+    if lat[0] > lat[-1]:
+        lat = lat[::-1].copy()
+        layers = {name: values[::-1, :] for name, values in layers.items()}
+    components = {name: np.ascontiguousarray(values)[None] for name, values in layers.items()}
+    return Field(key=key, source="copernicus", lon=lon, lat=lat, times=np.array([0.0]), components=components)
 
 
-def fetch_field(key: SnapshotKey) -> Field:
-    """Download one box of surface currents. Credentials come from the environment."""
-    import copernicusmarine  # lazy: heavy import, and unit tests replace it
+def fetch_copernicus(key: SnapshotKey) -> Field:
+    """Download one box of hourly surface currents. Credentials come from the environment."""
+    import copernicusmarine  # lazy: slow import, and tests substitute it
 
-    west, south, east, north = box_bounds(key)
+    west, south, east, north = fetch_bounds(key)
     ds = copernicusmarine.open_dataset(
-        dataset_id=config.DATASET_ID,
-        variables=list(COMPONENT_NAMES),
+        dataset_id=config.COPERNICUS_DATASET_ID,
+        variables=list(COMPONENTS),
         minimum_longitude=west,
         maximum_longitude=east,
         minimum_latitude=south,
         maximum_latitude=north,
-        start_datetime=(key.slice_time - timedelta(hours=1)).strftime(TIME_FORMAT),
-        end_datetime=(key.slice_time + timedelta(hours=1)).strftime(TIME_FORMAT),
+        start_datetime=(key.slice_time - timedelta(hours=1)).strftime(_TIME_FORMAT),
+        end_datetime=(key.slice_time + timedelta(hours=1)).strftime(_TIME_FORMAT),
     )
     return field_from_dataset(ds, key)
 ```
 
-- [ ] **Step 6: Wire it into the service**
-
-In `backend/app/service.py`, change the imports at the top to add:
+Replace everything from the `# ---- in-process cache` comment to the end of the file with:
 
 ```python
-import logging
-from concurrent.futures import ThreadPoolExecutor
+# ---- in-process cache -------------------------------------------------------
 
-from .sim import copernicus, engine
-```
+# key -> (field, expiry). expiry is None for real snapshots, a time.monotonic() deadline for fallbacks.
+_cache: dict[SnapshotKey, tuple[Field, float | None]] = {}
+_lock = threading.Lock()
+_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
-(remove the old `from .sim import engine` line), add below `MAX_ARROWS_PER_SIDE`:
 
-```python
-MEMORY_CACHE_MAX = 64
+def _cached(key: SnapshotKey) -> Field | None:
+    with _lock:
+        entry = _cache.get(key)
+    if entry is None:
+        return None
+    fld, expires = entry
+    if expires is not None and time.monotonic() >= expires:
+        return None
+    return fld
 
-log = logging.getLogger("plasticpaths")
-_memory: dict = {}  # SnapshotKey -> Field, real snapshots only
-_fetch_pool = ThreadPoolExecutor(max_workers=4)
-```
 
-and replace the whole `resolve_field` function with:
+def _remember(key: SnapshotKey, fld: Field, ttl: float | None = None) -> Field:
+    with _lock:
+        _cache[key] = (fld, None if ttl is None else time.monotonic() + ttl)
+    return fld
 
-```python
-def fetch_with_timeout(key: SnapshotKey) -> Field | None:
-    """Fetch from Copernicus within the time budget. Any failure returns None."""
-    future = _fetch_pool.submit(copernicus.fetch_field, key)
+
+def _fetch_with_timeout(key: SnapshotKey) -> Field | None:
+    """Copernicus within the time budget. Network, auth, timeout or empty box: None."""
+    future = _pool.submit(fetch_copernicus, key)
     try:
-        return future.result(timeout=config.FETCH_TIMEOUT_S)
-    except Exception as err:  # includes the timeout
-        log.warning("Copernicus fetch failed for %s: %r", key, err)
+        return future.result(timeout=config.COPERNICUS_TIMEOUT_S)
+    except Exception:
+        log.warning("copernicus fetch failed for %s, using synthetic field", key, exc_info=True)
         return None
 
 
-def remember(key: SnapshotKey, fld: Field) -> None:
-    _memory[key] = fld
-    while len(_memory) > MEMORY_CACHE_MAX:
-        _memory.pop(next(iter(_memory)))  # drop the oldest entry
+def load_field(key: SnapshotKey) -> Field:
+    """Cached field for the key: Copernicus, or a synthetic gyre if that fails.
 
-
-def resolve_field(key: SnapshotKey) -> Field:
-    """Memory, then Copernicus, then a synthetic field. Synthetic fields are never cached,
-    so the real source is retried on the next request."""
-    if key in _memory:
-        return _memory[key]
-    fld = fetch_with_timeout(key)
+    A fallback is reused for SYNTHETIC_RETRY_S so one request sees one field per box,
+    then the real source is tried again.
+    """
+    cached = _cached(key)
+    if cached is not None:
+        return cached
+    fld = _fetch_with_timeout(key)
     if fld is None:
-        return synthetic_field(key)
-    remember(key, fld)
-    return fld
+        return _remember(key, synthetic_field(key), ttl=config.SYNTHETIC_RETRY_S)
+    return _remember(key, fld)
 ```
 
-- [ ] **Step 7: Run tests to verify they pass**
+- [ ] **Step 4: Run tests to verify they pass**
 
-Run: `python -m pytest -q`
-Expected: 55 passed.
+Run: `.venv/Scripts/python -m pytest -q`
+Expected: 33 passed.
 
-- [ ] **Step 8: Smoke test against the real service**
+- [ ] **Step 5: Smoke test against the real service**
 
 Create `backend/scripts/smoke_copernicus.py`:
 
 ```python
-"""Manual check that real currents arrive. Run from backend/:  python -m scripts.smoke_copernicus"""
+"""Manual check that real currents arrive. Run from backend/:  python scripts/smoke_copernicus.py"""
 import math
+import sys
 import time
+from pathlib import Path
 
-import numpy as np
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app import service
-from app.sim import copernicus
-from app.sim.snapshot import key_for
+from app.sim.snapshot import current_slice_time, fetch_copernicus, make_key  # noqa: E402
 
-POINTS = {"North Pacific": (-140.2, 32.1), "Bay of Bengal": (88.3, 15.2), "Off Vancouver Island": (-126.4, 48.6)}
+POINTS = {
+    "North Pacific": (-140.2, 32.1),
+    "Bay of Bengal": (88.3, 15.2),
+    "Off Vancouver Island": (-126.4, 48.6),
+    "Fiji, at the antimeridian": (179.9, -17.0),
+}
 
 for name, (lon, lat) in POINTS.items():
-    key = key_for(lon, lat, 7, service.current_slice_time())
+    key = make_key(lon, lat, 7, current_slice_time())
     started = time.monotonic()
-    fld = copernicus.fetch_field(key)
+    fld = fetch_copernicus(key)
     u, v = fld.sample(lon, lat)
-    print(f"{name}: {time.monotonic() - started:.1f}s  grid {fld.u.shape}  "
-          f"land {np.isnan(fld.u).mean():.0%}  speed {math.hypot(u, v):.2f} m/s")
+    print(f"{name}: {time.monotonic() - started:.1f}s  grid {fld.nx}x{fld.ny}  "
+          f"land {fld.land.mean():.0%}  speed {math.hypot(u, v):.2f} m/s")
 ```
 
-Run: `python -m scripts.smoke_copernicus`
-Expected: three lines, each a few seconds, grid about `(1, 97, 97)`, speed between 0 and 2 m/s. If a fetch takes longer than 20 s here, raise `FETCH_TIMEOUT_S` in `config.py` to 40 and note it. If it raises a credentials error, fix `backend/.env` first.
+Run: `.venv/Scripts/python scripts/smoke_copernicus.py`
+Expected: four lines, each a few seconds, grid about `97x97` (the Fiji box is narrower because it is cut at 180), speed between 0 and 2 m/s. If a fetch takes longer than 20 s, raise `COPERNICUS_TIMEOUT_S` in `config.py` to 40. A credentials error means `backend/.env` needs fixing first.
 
-Then start the server and repeat the curl from Task 4 Step 6.
-Expected: the snapshot now shows `"source": "copernicus"`.
-
-- [ ] **Step 9: Commit**
+Then start the server (`.venv/Scripts/python -m uvicorn app.main:app --port 8000`) and run:
 
 ```bash
-git add requirements.txt app/sim/copernicus.py app/service.py scripts/smoke_copernicus.py tests/conftest.py tests/test_copernicus.py
-git commit -m "feat(backend): fetch real surface currents from Copernicus with timeout fallback"
+curl -s -X POST http://localhost:8000/api/simulate -H "Content-Type: application/json" \
+  -d '{"placements":[{"id":"bottle-1","type":"bottle","coordinates":[-140.2,32.1]}],"durationDays":7}' \
+  | .venv/Scripts/python -c "import sys,json; d=json.load(sys.stdin); print(d['snapshots'], d['summary'])"
+```
+
+Expected: the snapshot shows `"source": "copernicus"`.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add app/config.py app/sim/snapshot.py scripts/smoke_copernicus.py tests/test_copernicus.py
+git commit -m "feat(backend): fetch real surface currents from Copernicus with timeout and retry"
 ```
 
 ---
 
-### Task 6: Tiger Data schema and database module
+### Task 3: Tiger Data schema and database module
 
-**Prerequisite (human):** a Tiger Cloud service exists and `backend/.env` has `DATABASE_URL` set to its direct (non-pooled) connection string with `sslmode=require`.
+**Prerequisite (human):** a Tiger Cloud service exists and `backend/.env` has `DATABASE_URL` set to its direct (non-pooled) connection string with `sslmode=require`. Only Step 6 needs it.
 
 **Files:**
 - Create: `backend/scripts/schema.sql`, `backend/scripts/init_db.py`, `backend/app/db.py`
 - Test: `backend/tests/test_db_offline.py`
 
 **Interfaces:**
-- Consumes: `Field`, `SnapshotKey`, `build_field`, `COMPONENT_NAMES`, schema models, `config.DATABASE_URL`.
-- Produces (all in `app.db`):
+- Consumes: `Field`, `SnapshotKey`, `COMPONENTS` from `app.sim.snapshot`; `SimulateRequest`, `SimulateResponse`, `TimelineBucket`, `TimelineResponse` from `app.schemas`; `config.DATABASE_URL`, `config.FRAME_INTERVAL_SECONDS`.
+- Produces (all in `app.db`; `app.db` must never be imported at module level by `app.sim.snapshot`, which it imports):
   - `init_pool() -> bool`, `close_pool() -> None`, `available() -> bool`, `ping() -> bool`, `apply_schema() -> None`.
-  - `snapshot_rows(key: SnapshotKey, fld: Field)` generator of 12-tuples `(time, snapshot_id, ix, iy, lon, lat, uo, vo, utide, vtide, ustokes, vstokes)` with `None` for NaN. Pure.
-  - `field_from_rows(key, snapshot_id: str, nx: int, ny: int, nt: int, rows) -> Field | None` where each row is `(time, ix, iy, lon, lat, uo, vo, utide, vtide, ustokes, vstokes)`. Returns `None` if the row count is wrong. Pure.
-  - `timeline_points(start_time: datetime, rows) -> list[TimelinePoint]` where each row is `(bucket, status, count)`. Pure.
-  - `save_snapshot(key, fld) -> None`, `load_snapshot(key) -> Field | None`.
-  - `save_run(response: SimulateResponse, req: SimulateRequest, fields: dict, slice_time: datetime, parent_run_id: str | None) -> None`.
-  - `load_run(run_id: str) -> SimulateResponse | None`, `timeline(run_id: str) -> list[TimelinePoint] | None`.
+  - Pure helpers: `snapshot_rows(fld: Field)` yielding 12-tuples `(time, snapshot_id, ix, iy, lon, lat, uo, vo, utide, vtide, ustokes, vstokes)` with `None` for NaN; `field_from_rows(key, snapshot_id, nx, ny, nt, rows) -> Field | None` where each row is `(time, ix, iy, lon, lat, uo, vo, utide, vtide, ustokes, vstokes)`; `run_envelope(resp: SimulateResponse) -> dict` (the camelCase response without `trajectories`, with `persisted: true`); `position_rows(resp, start_time)` yielding `(time, run_id, item_id, litter_type, lon, lat, status)`; `run_from_rows(envelope: dict, start_time: datetime, rows) -> SimulateResponse` where each row is `(item_id, time, lon, lat, status)` ordered by item then time; `timeline_buckets(start_time, rows) -> list[TimelineBucket]` where each row is `(bucket, status, count)`.
+  - Database functions: `save_snapshot(fld: Field) -> None`, `load_snapshot(key: SnapshotKey) -> Field | None`, `save_run(resp: SimulateResponse, req: SimulateRequest, start_time: datetime, parent_run_id: str | None) -> None`, `load_run(run_id: str) -> SimulateResponse | None`, `timeline(run_id: str) -> TimelineResponse | None`.
 
 - [ ] **Step 1: Write the schema**
 
@@ -1937,115 +605,106 @@ CREATE INDEX IF NOT EXISTS current_samples_snapshot_idx ON current_samples (snap
 CREATE TABLE IF NOT EXISTS runs (
   run_id         UUID PRIMARY KEY,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  start_time     TIMESTAMPTZ NOT NULL,          -- the slice hour; positions.time = start_time + timeSeconds
-  parent_run_id  UUID,                          -- links the "with" run to its "without" twin
+  start_time     TIMESTAMPTZ NOT NULL,   -- the slice hour; positions.time = start_time + timeSeconds
+  parent_run_id  UUID,                   -- links a "with" run to its "without" twin
   duration_days  INT NOT NULL CHECK (duration_days BETWEEN 1 AND 30),
-  params         JSONB NOT NULL,
-  summary        JSONB NOT NULL,
-  snapshots      JSONB NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS run_items (
-  run_id      UUID NOT NULL,
-  item_id     TEXT NOT NULL,
-  litter_type TEXT NOT NULL,
-  start_lon   DOUBLE PRECISION NOT NULL,
-  start_lat   DOUBLE PRECISION NOT NULL,
-  snapshot_id UUID NOT NULL,
-  final_status TEXT NOT NULL,
-  captured_by TEXT,
-  status_changed_at_seconds INT,
-  PRIMARY KEY (run_id, item_id)
-);
-
-CREATE TABLE IF NOT EXISTS run_collection_points (
-  run_id   UUID NOT NULL,
-  cp_id    TEXT NOT NULL,
-  lon      DOUBLE PRECISION NOT NULL,
-  lat      DOUBLE PRECISION NOT NULL,
-  radius_m DOUBLE PRECISION NOT NULL,
-  captured_count INT NOT NULL DEFAULT 0,
-  PRIMARY KEY (run_id, cp_id)
+  params         JSONB NOT NULL,         -- the request body
+  summary        JSONB NOT NULL,         -- the four status counts
+  envelope       JSONB NOT NULL          -- the full response except trajectories
 );
 
 -- One row per item per recorded sample.
 CREATE TABLE IF NOT EXISTS positions (
-  time    TIMESTAMPTZ NOT NULL,
-  run_id  UUID NOT NULL,
-  item_id TEXT NOT NULL,
-  lon     DOUBLE PRECISION NOT NULL,
-  lat     DOUBLE PRECISION NOT NULL,
-  status  TEXT NOT NULL
+  time        TIMESTAMPTZ NOT NULL,
+  run_id      UUID NOT NULL,
+  item_id     TEXT NOT NULL,
+  litter_type TEXT NOT NULL,
+  lon         DOUBLE PRECISION NOT NULL,
+  lat         DOUBLE PRECISION NOT NULL,
+  status      TEXT NOT NULL
 );
 SELECT create_hypertable('positions', by_range('time'), if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS positions_run_idx ON positions (run_id, time);
 ```
 
-`create_hypertable(..., if_not_exists => TRUE)` is used instead of the `WITH (timescaledb.hypertable)` clause so the script can be re-run safely on any TimescaleDB version.
+`create_hypertable(..., if_not_exists => TRUE)` is used instead of the `WITH (timescaledb.hypertable)` clause so the script can be re-run safely.
 
 - [ ] **Step 2: Write the failing tests for the pure helpers**
 
 Create `backend/tests/test_db_offline.py`:
 
 ```python
-from datetime import timedelta
+import json
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import numpy as np
 
 from app import db
-from app.sim.snapshot import build_field, key_for, synthetic_field
-from tests.helpers import T0
+from app.schemas import SimulateResponse
+from app.sim.snapshot import make_key, synthetic_field
 
-KEY = key_for(10.2, -20.1, 1, T0)
+T0 = datetime(2026, 10, 3, 18, tzinfo=UTC)
+KEY = make_key(10.2, -20.1, 1, T0)  # centre (10.0, -20.0)
+FIXTURE = Path(__file__).resolve().parents[1] / "scripts" / "fixtures" / "simulate_response.json"
 
 
 def field_with_land():
-    base = synthetic_field(KEY)
-    comps = {name: values.copy() for name, values in base.components.items()}
-    comps["uo"][0, 0, 0] = np.nan
-    comps["vo"][0, 0, 0] = np.nan
-    return build_field(base.lon, base.lat, comps, T0, "copernicus")
+    return synthetic_field(KEY, land=lambda lon, lat: lon > 11.0)
+
+
+def as_selected(fld):
+    """Rows as load_snapshot's SELECT returns them: without the snapshot_id column."""
+    return [(r[0], *r[2:]) for r in db.snapshot_rows(fld)]
 
 
 def test_snapshot_rows_cover_every_cell_and_store_land_as_null():
     fld = field_with_land()
-    rows = list(db.snapshot_rows(KEY, fld))
-    assert len(rows) == fld.lon.size * fld.lat.size
-    first = rows[0]
-    assert first[0] == T0 and first[1] == fld.snapshot_id
-    assert first[2:4] == (0, 0)
-    assert first[6] is None and first[7] is None        # uo, vo on the land cell
-    assert isinstance(rows[1][6], float)
+    rows = list(db.snapshot_rows(fld))
+    assert len(rows) == fld.nx * fld.ny
+    first, last = rows[0], rows[-1]
+    assert first[0] == T0 and first[1] == fld.snapshot_id and first[2:4] == (0, 0)
+    assert isinstance(first[6], float)                 # uo in the south-west corner: water
+    assert last[6] is None and last[7] is None         # uo, vo in the north-east corner: land
 
 
 def test_snapshot_survives_a_round_trip_through_rows():
     fld = field_with_land()
-    stored = [(r[0], *r[2:]) for r in db.snapshot_rows(KEY, fld)]  # drop snapshot_id, as the SELECT does
-    loaded = db.field_from_rows(KEY, fld.snapshot_id, fld.lon.size, fld.lat.size, 1, stored)
+    loaded = db.field_from_rows(KEY, fld.snapshot_id, fld.nx, fld.ny, 1, as_selected(fld))
     assert loaded.snapshot_id == fld.snapshot_id
-    assert loaded.source == "copernicus"
+    assert loaded.key == KEY and loaded.source == "copernicus"
     np.testing.assert_allclose(loaded.lon, fld.lon)
     np.testing.assert_allclose(loaded.lat, fld.lat)
-    np.testing.assert_array_equal(loaded.u, fld.u)      # NaN positions included
+    np.testing.assert_array_equal(loaded.land, fld.land)
+    np.testing.assert_array_equal(loaded.u, fld.u)
     np.testing.assert_array_equal(loaded.v, fld.v)
+    assert loaded.sample(10.2, -20.1) == fld.sample(10.2, -20.1)
 
 
 def test_field_from_rows_rejects_a_partial_snapshot():
     fld = field_with_land()
-    stored = [(r[0], *r[2:]) for r in db.snapshot_rows(KEY, fld)][:-5]
-    assert db.field_from_rows(KEY, fld.snapshot_id, fld.lon.size, fld.lat.size, 1, stored) is None
+    assert db.field_from_rows(KEY, fld.snapshot_id, fld.nx, fld.ny, 1, as_selected(fld)[:-5]) is None
 
 
-def test_timeline_points_fold_status_counts_per_hour():
+def test_run_survives_a_round_trip_through_position_rows():
+    original = SimulateResponse.model_validate(json.loads(FIXTURE.read_text()))
+    envelope = db.run_envelope(original)
+    assert "trajectories" not in envelope and envelope["persisted"] is True
+    stored = sorted((r[2], r[0], r[4], r[5], r[6]) for r in db.position_rows(original, T0))
+    loaded = db.run_from_rows(json.loads(json.dumps(envelope)), T0, stored)  # through JSON, as JSONB does
+    assert loaded.model_dump() == {**original.model_dump(), "persisted": True}
+
+
+def test_timeline_buckets_fold_status_counts_per_hour():
     rows = [
         (T0, "floating", 3),
         (T0 + timedelta(hours=1), "floating", 2),
         (T0 + timedelta(hours=1), "captured", 1),
     ]
-    points = db.timeline_points(T0, rows)
-    assert [p.time_seconds for p in points] == [0, 3600]
-    assert (points[0].floating, points[0].captured) == (3, 0)
-    assert (points[1].floating, points[1].captured, points[1].beached, points[1].outside) == (2, 1, 0, 0)
+    buckets = db.timeline_buckets(T0, rows)
+    assert [b.time_seconds for b in buckets] == [0, 3600]
+    assert (buckets[0].floating, buckets[0].captured) == (3, 0)
+    assert (buckets[1].floating, buckets[1].captured, buckets[1].beached, buckets[1].outside) == (2, 1, 0, 0)
 
 
 def test_database_is_unavailable_without_a_url():
@@ -2056,7 +715,7 @@ def test_database_is_unavailable_without_a_url():
 
 - [ ] **Step 3: Run tests to verify they fail**
 
-Run: `python -m pytest tests/test_db_offline.py -q`
+Run: `.venv/Scripts/python -m pytest tests/test_db_offline.py -q`
 Expected: `ImportError: cannot import name 'db' from 'app'`.
 
 - [ ] **Step 4: Implement the database module**
@@ -2064,7 +723,12 @@ Expected: `ImportError: cannot import name 'db' from 'app'`.
 Create `backend/app/db.py`:
 
 ```python
-"""Tiger Data (TimescaleDB) access. Callers check available() first and catch exceptions."""
+"""Tiger Data (TimescaleDB) access.
+
+Callers check available() first and catch exceptions: a database problem must never
+fail a simulation. app.sim.snapshot imports this module lazily, never at module level.
+"""
+
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -2073,24 +737,22 @@ import numpy as np
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
-from . import config
-from .schemas import (
-    Attribution, CollectorSummary, ItemSummary, ParticleTrajectory, SimulateRequest,
-    SimulateResponse, SnapshotInfo, StatusCounts, TimelinePoint, TrajectorySample,
-)
-from .sim.snapshot import COMPONENT_NAMES, Field, SnapshotKey, build_field
+from app import config
+from app.schemas import SimulateRequest, SimulateResponse, TimelineBucket, TimelineResponse
+from app.sim.snapshot import COMPONENTS, Field, SnapshotKey
 
-log = logging.getLogger("plasticpaths")
-SCHEMA_PATH = Path(__file__).resolve().parents[1] / "scripts" / "schema.sql"
+log = logging.getLogger(__name__)
+SCHEMA_PATH = Path(__file__).resolve().parent.parent / "scripts" / "schema.sql"
 STATUSES = ("floating", "captured", "beached", "outside")
 
 _pool: ConnectionPool | None = None
 
 
-# ---------- connection ----------
+# ---- connection -------------------------------------------------------------
+
 
 def init_pool() -> bool:
-    """Open the pool. Returns False (and stays unavailable) if there is no URL or no connection."""
+    """Open the pool. False (and unavailable) when there is no URL or no connection."""
     global _pool
     if not config.DATABASE_URL:
         return False
@@ -2099,8 +761,8 @@ def init_pool() -> bool:
         pool.open(wait=True, timeout=10)
         _pool = pool
         return True
-    except Exception as err:
-        log.warning("Tiger Data unavailable: %r", err)
+    except Exception:
+        log.warning("Tiger Data unavailable", exc_info=True)
         _pool = None
         return False
 
@@ -2132,50 +794,86 @@ def apply_schema() -> None:
         conn.execute(SCHEMA_PATH.read_text())
 
 
-# ---------- pure helpers (unit tested without a database) ----------
+# ---- pure helpers (unit tested without a database) --------------------------
 
-def snapshot_rows(key: SnapshotKey, fld: Field):
-    """Yield one current_samples row per grid cell per slice. NaN becomes None."""
-    lon = fld.lon.tolist()
-    lat = fld.lat.tolist()
-    for k in range(fld.u.shape[0]):
-        t = key.slice_time + timedelta(hours=k)
-        layers = [fld.components[name][k].tolist() for name in COMPONENT_NAMES]
+
+def snapshot_rows(fld: Field):
+    """One current_samples row per grid cell per slice. NaN becomes None."""
+    lon, lat = fld.lon.tolist(), fld.lat.tolist()
+    for k, offset in enumerate(fld.times.tolist()):
+        t = fld.key.slice_time + timedelta(seconds=offset)
+        layers = [fld.components[name][k].tolist() for name in COMPONENTS]
         for j, la in enumerate(lat):
             for i, lo in enumerate(lon):
                 values = [layer[j][i] for layer in layers]
                 yield (t, fld.snapshot_id, i, j, lo, la, *[None if v != v else v for v in values])
 
 
-def field_from_rows(key: SnapshotKey, snapshot_id: str, nx: int, ny: int, nt: int, rows) -> Field | None:
+def field_from_rows(key: SnapshotKey, snapshot_id, nx: int, ny: int, nt: int, rows) -> Field | None:
     """Rebuild a Field from current_samples rows. None if the snapshot is incomplete."""
     if len(rows) != nx * ny * nt:
         return None
-    lon = np.zeros(nx)
-    lat = np.zeros(ny)
-    comps = {name: np.full((nt, ny, nx), np.nan, dtype="float32") for name in COMPONENT_NAMES}
+    offsets = sorted({(row[0] - key.slice_time).total_seconds() for row in rows})
+    if len(offsets) != nt:
+        return None
+    slice_index = {offset: k for k, offset in enumerate(offsets)}
+    lon, lat = np.zeros(nx), np.zeros(ny)
+    components = {name: np.full((nt, ny, nx), np.nan, dtype=np.float32) for name in COMPONENTS}
     for time, ix, iy, lo, la, *values in rows:
-        k = int((time - key.slice_time).total_seconds() // 3600)
-        lon[ix] = lo
-        lat[iy] = la
-        for name, value in zip(COMPONENT_NAMES, values):
+        k = slice_index[(time - key.slice_time).total_seconds()]
+        lon[ix], lat[iy] = lo, la
+        for name, value in zip(COMPONENTS, values):
             if value is not None:
-                comps[name][k, iy, ix] = value
-    return build_field(lon, lat, comps, key.slice_time, "copernicus", snapshot_id=str(snapshot_id))
+                components[name][k, iy, ix] = value
+    return Field(key=key, source="copernicus", lon=lon, lat=lat, times=np.array(offsets),
+                 components=components, snapshot_id=str(snapshot_id))
 
 
-def timeline_points(start_time: datetime, rows) -> list:
-    """Fold (bucket, status, count) rows into one TimelinePoint per bucket."""
-    buckets: dict = {}
+def run_envelope(resp: SimulateResponse) -> dict:
+    """The response as stored in runs.envelope: everything except the trajectories."""
+    envelope = resp.model_dump(by_alias=True, mode="json", exclude={"trajectories"})
+    envelope["persisted"] = True
+    return envelope
+
+
+def position_rows(resp: SimulateResponse, start_time: datetime):
+    """One positions row per sample."""
+    for trajectory in resp.trajectories:
+        for sample in trajectory.samples:
+            yield (start_time + timedelta(seconds=sample.time_seconds), resp.run_id, trajectory.id,
+                   trajectory.type, sample.coordinates[0], sample.coordinates[1], sample.status)
+
+
+def run_from_rows(envelope: dict, start_time: datetime, rows) -> SimulateResponse:
+    """Rebuild a response from its envelope and positions rows (item_id, time, lon, lat, status)."""
+    samples: dict[str, list] = {}
+    for item_id, time, lon, lat, status in rows:
+        samples.setdefault(item_id, []).append({
+            "timeSeconds": int((time - start_time).total_seconds()),
+            "coordinates": [lon, lat],
+            "status": status,
+        })
+    trajectories = [
+        {"id": item["id"], "type": item["type"], "samples": samples.get(item["id"], [])}
+        for item in envelope["items"]  # the envelope keeps the original item order
+    ]
+    return SimulateResponse.model_validate({**envelope, "trajectories": trajectories})
+
+
+def timeline_buckets(start_time: datetime, rows) -> list[TimelineBucket]:
+    """Fold (bucket, status, count) rows into one TimelineBucket per bucket."""
+    folded: dict[int, dict] = {}
     for bucket, status, count in rows:
         seconds = int((bucket - start_time).total_seconds())
-        buckets.setdefault(seconds, dict.fromkeys(STATUSES, 0))[status] = count
-    return [TimelinePoint(time_seconds=seconds, **counts) for seconds, counts in sorted(buckets.items())]
+        folded.setdefault(seconds, dict.fromkeys(STATUSES, 0))[status] = count
+    return [TimelineBucket(time_seconds=seconds, **counts) for seconds, counts in sorted(folded.items())]
 
 
-# ---------- snapshots ----------
+# ---- snapshots --------------------------------------------------------------
 
-def save_snapshot(key: SnapshotKey, fld: Field) -> None:
+
+def save_snapshot(fld: Field) -> None:
+    key = fld.key
     with _pool.connection() as conn:
         inserted = conn.execute(
             """INSERT INTO snapshots (snapshot_id, centre_lon, centre_lat, half_width_deg,
@@ -2183,7 +881,7 @@ def save_snapshot(key: SnapshotKey, fld: Field) -> None:
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                ON CONFLICT DO NOTHING RETURNING snapshot_id""",
             (fld.snapshot_id, key.centre_lon, key.centre_lat, key.half_width_deg,
-             key.slice_time, key.n_slices, fld.source, fld.lon.size, fld.lat.size),
+             key.slice_time, key.n_slices, fld.source, fld.nx, fld.ny),
         ).fetchone()
         if inserted is None:
             return  # another request stored this box first
@@ -2192,7 +890,7 @@ def save_snapshot(key: SnapshotKey, fld: Field) -> None:
                 """COPY current_samples (time, snapshot_id, ix, iy, lon, lat,
                                          uo, vo, utide, vtide, ustokes, vstokes) FROM STDIN"""
             ) as copy:
-                for row in snapshot_rows(key, fld):
+                for row in snapshot_rows(fld):
                     copy.write_row(row)
 
 
@@ -2212,154 +910,116 @@ def load_snapshot(key: SnapshotKey) -> Field | None:
                FROM current_samples WHERE snapshot_id = %s""",
             (snapshot_id,),
         ).fetchall()
-    return field_from_rows(key, str(snapshot_id), nx, ny, nt, rows)
+    return field_from_rows(key, snapshot_id, nx, ny, nt, rows)
 
 
-# ---------- runs ----------
+# ---- runs -------------------------------------------------------------------
 
-def save_run(response: SimulateResponse, req: SimulateRequest, fields: dict,
-             slice_time: datetime, parent_run_id: str | None) -> None:
-    run_id = response.run_id
-    starts = {t.id: t.samples[0].coordinates for t in response.trajectories}
+
+def save_run(resp: SimulateResponse, req: SimulateRequest, start_time: datetime,
+             parent_run_id: str | None) -> None:
     with _pool.connection() as conn:  # one transaction
         conn.execute(
-            """INSERT INTO runs (run_id, start_time, parent_run_id, duration_days, params, summary, snapshots)
+            """INSERT INTO runs (run_id, start_time, parent_run_id, duration_days, params, summary, envelope)
                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-            (run_id, slice_time, parent_run_id, response.duration_days,
+            (resp.run_id, start_time, parent_run_id, resp.duration_days,
              Jsonb(req.model_dump(by_alias=True, mode="json")),
-             Jsonb(response.summary.model_dump()),
-             Jsonb([s.model_dump(by_alias=True, mode="json") for s in response.snapshots])),
+             Jsonb(resp.summary.model_dump()),
+             Jsonb(run_envelope(resp))),
         )
         with conn.cursor() as cur:
-            cur.executemany(
-                """INSERT INTO run_items (run_id, item_id, litter_type, start_lon, start_lat, snapshot_id,
-                                          final_status, captured_by, status_changed_at_seconds)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                [(run_id, item.id, item.type, starts[item.id][0], starts[item.id][1],
-                  fields[item.id].snapshot_id, item.final_status, item.captured_by,
-                  item.status_changed_at_seconds) for item in response.items],
-            )
-            cur.executemany(
-                """INSERT INTO run_collection_points (run_id, cp_id, lon, lat, radius_m, captured_count)
-                   VALUES (%s, %s, %s, %s, %s, %s)""",
-                [(run_id, c.id, c.coordinates[0], c.coordinates[1], c.radius_m, c.captured_count)
-                 for c in response.collectors],
-            )
-            with cur.copy("COPY positions (time, run_id, item_id, lon, lat, status) FROM STDIN") as copy:
-                for trajectory in response.trajectories:
-                    for sample in trajectory.samples:
-                        copy.write_row((slice_time + timedelta(seconds=sample.time_seconds), run_id,
-                                        trajectory.id, sample.coordinates[0], sample.coordinates[1],
-                                        sample.status))
+            with cur.copy(
+                "COPY positions (time, run_id, item_id, litter_type, lon, lat, status) FROM STDIN"
+            ) as copy:
+                for row in position_rows(resp, start_time):
+                    copy.write_row(row)
 
 
 def load_run(run_id: str) -> SimulateResponse | None:
     with _pool.connection() as conn:
-        run = conn.execute(
-            "SELECT start_time, duration_days, summary, snapshots FROM runs WHERE run_id = %s", (run_id,),
-        ).fetchone()
+        run = conn.execute("SELECT start_time, envelope FROM runs WHERE run_id = %s", (run_id,)).fetchone()
         if run is None:
             return None
-        start_time, duration_days, summary, snapshots = run
-        items = conn.execute(
-            """SELECT item_id, litter_type, final_status, captured_by, status_changed_at_seconds
-               FROM run_items WHERE run_id = %s ORDER BY item_id""", (run_id,),
-        ).fetchall()
-        collectors = conn.execute(
-            """SELECT cp_id, lon, lat, radius_m, captured_count
-               FROM run_collection_points WHERE run_id = %s ORDER BY cp_id""", (run_id,),
-        ).fetchall()
-        positions = conn.execute(
+        rows = conn.execute(
             """SELECT item_id, time, lon, lat, status FROM positions
-               WHERE run_id = %s ORDER BY item_id, time""", (run_id,),
+               WHERE run_id = %s ORDER BY item_id, time""",
+            (run_id,),
         ).fetchall()
-
-    samples: dict = {}
-    for item_id, time, lon, lat, status in positions:
-        samples.setdefault(item_id, []).append(TrajectorySample(
-            time_seconds=int((time - start_time).total_seconds()), coordinates=(lon, lat), status=status))
-
-    return SimulateResponse(
-        run_id=str(run_id),
-        duration_days=duration_days,
-        total_seconds=duration_days * 86400,
-        sample_interval_seconds=config.SAMPLE_INTERVAL_SECONDS,
-        trajectories=[ParticleTrajectory(id=i[0], type=i[1], samples=samples.get(i[0], [])) for i in items],
-        items=[ItemSummary(id=i[0], type=i[1], final_status=i[2], captured_by=i[3],
-                           status_changed_at_seconds=i[4]) for i in items],
-        collectors=[CollectorSummary(id=c[0], coordinates=(c[1], c[2]), radius_m=c[3], captured_count=c[4])
-                    for c in collectors],
-        summary=StatusCounts(**summary),
-        snapshots=[SnapshotInfo.model_validate(s) for s in snapshots],
-        attribution=Attribution(source=config.ATTRIBUTION_SOURCE, dataset=config.DATASET_ID,
-                                limitations=config.LIMITATIONS),
-        persisted=True,
-    )
+    return run_from_rows(run[1], run[0], rows)
 
 
-def timeline(run_id: str) -> list | None:
-    """Status counts per hour, computed in the database with time_bucket."""
+def timeline(run_id: str) -> TimelineResponse | None:
+    """Status counts per sample interval, computed in the database with time_bucket."""
+    bucket_seconds = config.FRAME_INTERVAL_SECONDS
     with _pool.connection() as conn:
         run = conn.execute("SELECT start_time FROM runs WHERE run_id = %s", (run_id,)).fetchone()
         if run is None:
             return None
         rows = conn.execute(
-            """SELECT time_bucket('1 hour', time) AS bucket, status, count(*)
+            """SELECT time_bucket(%s * INTERVAL '1 second', time) AS bucket, status, count(*)
                FROM positions WHERE run_id = %s
-               GROUP BY bucket, status ORDER BY bucket""", (run_id,),
+               GROUP BY bucket, status ORDER BY bucket""",
+            (bucket_seconds, run_id),
         ).fetchall()
-    return timeline_points(run[0], rows)
+    return TimelineResponse(run_id=str(run_id), bucket_seconds=bucket_seconds,
+                            buckets=timeline_buckets(run[0], rows))
 ```
 
 Create `backend/scripts/init_db.py`:
 
 ```python
-"""Create the Tiger Data schema. Safe to re-run. Run from backend/:  python -m scripts.init_db"""
+"""Create the Tiger Data schema. Safe to re-run. Run from backend/:  python scripts/init_db.py"""
 import sys
+from pathlib import Path
 
-from app import db
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app import db  # noqa: E402
 
 if not db.init_pool():
     sys.exit("Could not connect. Check DATABASE_URL in backend/.env")
 db.apply_schema()
 with db._pool.connection() as conn:
-    tables = conn.execute("SELECT hypertable_name FROM timescaledb_information.hypertables ORDER BY 1").fetchall()
+    tables = conn.execute(
+        "SELECT hypertable_name FROM timescaledb_information.hypertables ORDER BY 1"
+    ).fetchall()
 print("hypertables:", [t[0] for t in tables])
 db.close_pool()
 ```
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `python -m pytest -q`
-Expected: 60 passed.
+Run: `.venv/Scripts/python -m pytest -q`
+Expected: 39 passed.
 
 - [ ] **Step 6: Create the schema on the real service**
 
-Run: `python -m scripts.init_db`
-Expected: `hypertables: ['current_samples', 'positions']`. Run it a second time; the output must be identical with no error.
+Run: `.venv/Scripts/python scripts/init_db.py`
+Expected: `hypertables: ['current_samples', 'positions']`. Run it a second time: identical output, no error.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add scripts/schema.sql scripts/init_db.py app/db.py tests/test_db_offline.py
-git commit -m "feat(backend): Tiger Data schema and database module with hypertables"
+git commit -m "feat(backend): Tiger Data schema and database module with two hypertables"
 ```
 
 ---
 
-### Task 7: Persist runs, cache snapshots in Tiger, replay and timeline endpoints
+### Task 4: Persist runs, cache snapshots in Tiger, serve replay and timeline from it
 
 **Files:**
-- Modify: `backend/app/service.py` (`resolve_field`, `persist`), `backend/app/routes.py` (health, two run endpoints), `backend/app/main.py` (lifespan)
+- Modify: `backend/app/sim/snapshot.py` (`load_field` and two helpers), `backend/app/routes.py` (persistence, replay, timeline, health), `backend/app/main.py` (lifespan)
 - Create: `backend/scripts/smoke.py`
 - Test: `backend/tests/test_persistence.py`
 
 **Interfaces:**
-- Consumes: every `db` function from Task 6; `service.fetch_with_timeout`, `service.remember`, `service._memory` from Task 5.
+- Consumes: every `db` function from Task 3; `_cached`, `_remember`, `_fetch_with_timeout` in `snapshot` from Task 2.
 - Produces:
-  - `service.resolve_field(key)` order: memory, Tiger, Copernicus (then stored in Tiger), synthetic.
-  - `service.persist(...)` returns `True` only when `db.save_run` succeeded.
-  - HTTP: `GET /api/runs/{run_id}` (200, 404, 503), `GET /api/runs/{run_id}/timeline` (200, 404, 503), `GET /api/health` now reports the real `db` flag.
+  - `snapshot.load_field(key)` order: memory, Tiger, Copernicus (then stored in Tiger), synthetic. Synthetic fields are never stored.
+  - `routes.build_response(req, fields, *, honour_collectors=True, parent_run_id=None)`; `persisted` is `True` only when `db.save_run` succeeded. Every run is also kept in the in-memory `_runs` store.
+  - `GET /api/runs/{run_id}` and `/timeline`: Tiger first when available and the id is a UUID, the in-memory store otherwise, 404 `run_not_found` if neither has it.
+  - `GET /api/health` reports the real `db` flag.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2367,22 +1027,23 @@ Create `backend/tests/test_persistence.py`:
 
 ```python
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app import db, service
+from app import db
 from app.main import app
-from app.schemas import SimulateResponse, TimelinePoint
-from app.sim import copernicus
-from app.sim.snapshot import key_for
-from tests.helpers import T0, uniform_field
+from app.schemas import SimulateResponse, TimelineBucket, TimelineResponse
+from app.sim import snapshot
+from app.sim.snapshot import load_field, make_key, synthetic_field
 
 client = TestClient(app)  # no "with": the lifespan does not run, so no real pool is opened
 
-RUN_ID = "00000000-0000-0000-0000-000000000001"
-KEY = key_for(10.2, -20.1, 1, T0)
+T0 = datetime(2026, 10, 3, 18, tzinfo=UTC)
+KEY = make_key(10.2, -20.1, 1, T0)
+RUN_ID = "00000000-0000-4000-8000-0000000000aa"
 BODY = {"placements": [
     {"id": "bottle-1", "type": "bottle", "coordinates": [10.2, -20.1]},
     {"id": "collector-1", "type": "collector", "coordinates": [10.4, -20.1]},
@@ -2391,52 +1052,56 @@ FIXTURE = Path(__file__).resolve().parents[1] / "scripts" / "fixtures" / "simula
 
 
 def real_field():
-    fld = uniform_field(u=0.2)
+    fld = synthetic_field(KEY, uniform=(0.2, 0.0))
     fld.source = "copernicus"
     return fld
 
 
 @pytest.fixture
 def fake_db(monkeypatch):
-    """Pretend Tiger is connected and record what the service asks of it."""
+    """Pretend Tiger is connected and record what the app asks of it."""
     calls = {"runs": [], "snapshots": [], "lookups": []}
     monkeypatch.setattr(db, "available", lambda: True)
     monkeypatch.setattr(db, "ping", lambda: True)
     monkeypatch.setattr(db, "load_snapshot", lambda key: calls["lookups"].append(key))
-    monkeypatch.setattr(db, "save_snapshot", lambda key, fld: calls["snapshots"].append(key))
-    monkeypatch.setattr(db, "save_run",
-                        lambda response, req, fields, slice_time, parent_run_id:
-                        calls["runs"].append((response.run_id, parent_run_id)))
+    monkeypatch.setattr(db, "save_snapshot", lambda fld: calls["snapshots"].append(fld.key))
+    monkeypatch.setattr(db, "save_run", lambda resp, req, start_time, parent_run_id:
+                        calls["runs"].append((resp.run_id, parent_run_id, start_time)))
+    monkeypatch.setattr(db, "load_run", lambda run_id: None)
+    monkeypatch.setattr(db, "timeline", lambda run_id: None)
     return calls
 
 
-@pytest.mark.parametrize("path", [f"/api/runs/{RUN_ID}", f"/api/runs/{RUN_ID}/timeline"])
-def test_run_endpoints_return_503_without_a_database(path):
-    assert client.get(path).status_code == 503
+def test_health_reports_no_database():
+    assert client.get("/api/health").json() == {"ok": True, "db": False}
 
 
-def test_health_reports_database_state(fake_db):
-    assert client.get("/api/health").json() == {"status": "ok", "db": True}
+def test_health_reports_a_connected_database(fake_db):
+    assert client.get("/api/health").json() == {"ok": True, "db": True}
 
 
-def test_simulate_without_database_still_succeeds_unpersisted():
+def test_simulate_without_database_succeeds_unpersisted():
     data = client.post("/api/simulate", json=BODY).json()
     assert data["persisted"] is False
-    assert len(data["trajectories"]) == 1
+    assert client.get(f"/api/runs/{data['runId']}").json() == data
 
 
 def test_simulate_persists_when_database_is_available(fake_db):
     data = client.post("/api/simulate", json=BODY).json()
     assert data["persisted"] is True
-    assert fake_db["runs"] == [(data["runId"], None)]
+    run_id, parent, start_time = fake_db["runs"][0]
+    assert (run_id, parent) == (data["runId"], None)
+    assert start_time == datetime.fromisoformat(data["snapshots"][0]["sliceTime"])
+    assert len(fake_db["runs"]) == 1
 
 
 def test_compare_links_the_with_run_to_the_without_run(fake_db):
     data = client.post("/api/compare", json=BODY).json()
-    assert fake_db["runs"] == [
+    assert [(r[0], r[1]) for r in fake_db["runs"]] == [
         (data["without"]["runId"], None),
         (data["with"]["runId"], data["without"]["runId"]),
     ]
+    assert data["with"]["persisted"] is True
 
 
 def test_database_failure_during_save_does_not_fail_the_request(fake_db, monkeypatch):
@@ -2446,29 +1111,31 @@ def test_database_failure_during_save_does_not_fail_the_request(fake_db, monkeyp
     monkeypatch.setattr(db, "save_run", boom)
     response = client.post("/api/simulate", json=BODY)
     assert response.status_code == 200
-    assert response.json()["persisted"] is False
+    data = response.json()
+    assert data["persisted"] is False
+    assert client.get(f"/api/runs/{data['runId']}").json() == data  # still replayable from memory
 
 
 def test_stored_snapshot_is_used_before_copernicus(fake_db, monkeypatch):
     stored = real_field()
     fetches = []
     monkeypatch.setattr(db, "load_snapshot", lambda key: stored)
-    monkeypatch.setattr(copernicus, "fetch_field", lambda key: fetches.append(key))
-    assert service.resolve_field(KEY) is stored
-    assert fetches == []
-    assert service._memory[KEY] is stored
+    monkeypatch.setattr(snapshot, "fetch_copernicus", lambda key: fetches.append(key))
+    assert load_field(KEY) is stored
+    assert fetches == [] and fake_db["snapshots"] == []
+    assert load_field(KEY) is stored  # now from memory
 
 
 def test_fetched_snapshot_is_stored_in_tiger(fake_db, monkeypatch):
     fetched = real_field()
-    monkeypatch.setattr(copernicus, "fetch_field", lambda key: fetched)
-    assert service.resolve_field(KEY) is fetched
+    monkeypatch.setattr(snapshot, "fetch_copernicus", lambda key: fetched)
+    assert load_field(KEY) is fetched
     assert fake_db["lookups"] == [KEY]
     assert fake_db["snapshots"] == [KEY]
 
 
 def test_synthetic_fallback_is_never_stored(fake_db):
-    assert service.resolve_field(KEY).source == "synthetic"  # the autouse fixture blocks the fetch
+    assert load_field(KEY).source == "synthetic"  # the autouse fixture blocks the fetch
     assert fake_db["snapshots"] == []
 
 
@@ -2478,212 +1145,263 @@ def test_snapshot_lookup_failure_falls_through_to_copernicus(fake_db, monkeypatc
 
     fetched = real_field()
     monkeypatch.setattr(db, "load_snapshot", boom)
-    monkeypatch.setattr(copernicus, "fetch_field", lambda key: fetched)
-    assert service.resolve_field(KEY) is fetched
+    monkeypatch.setattr(snapshot, "fetch_copernicus", lambda key: fetched)
+    assert load_field(KEY) is fetched
 
 
-def test_get_run_returns_the_stored_run(fake_db, monkeypatch):
+def test_replay_is_served_from_tiger_when_it_has_the_run(fake_db, monkeypatch):
     stored = SimulateResponse.model_validate(json.loads(FIXTURE.read_text()))
-    monkeypatch.setattr(db, "load_run", lambda run_id: stored)
+    asked = []
+    monkeypatch.setattr(db, "load_run", lambda run_id: asked.append(run_id) or stored)
     response = client.get(f"/api/runs/{RUN_ID}")
     assert response.status_code == 200
     assert response.json()["runId"] == stored.run_id
-    assert response.json()["trajectories"][0]["samples"][0]["timeSeconds"] == 0
+    assert asked == [RUN_ID]
+
+
+def test_replay_falls_back_to_memory_when_tiger_lacks_the_run(fake_db):
+    data = client.post("/api/simulate", json=BODY).json()
+    assert client.get(f"/api/runs/{data['runId']}").json() == data
+
+
+def test_replay_falls_back_to_memory_when_tiger_errors(fake_db, monkeypatch):
+    data = client.post("/api/simulate", json=BODY).json()
+
+    def boom(run_id):
+        raise RuntimeError("connection lost")
+
+    monkeypatch.setattr(db, "load_run", boom)
+    assert client.get(f"/api/runs/{data['runId']}").json() == data
 
 
 @pytest.mark.parametrize("run_id", [RUN_ID, "not-a-uuid"])
-def test_get_run_returns_404_for_unknown_or_malformed_id(fake_db, monkeypatch, run_id):
-    monkeypatch.setattr(db, "load_run", lambda run_id: None)
-    assert client.get(f"/api/runs/{run_id}").status_code == 404
+def test_unknown_run_is_404(fake_db, run_id):
+    response = client.get(f"/api/runs/{run_id}")
+    assert response.status_code == 404
+    assert response.json()["code"] == "run_not_found"
 
 
-def test_timeline_returns_points(fake_db, monkeypatch):
-    points = [TimelinePoint(time_seconds=0, floating=2, captured=0, beached=0, outside=0),
-              TimelinePoint(time_seconds=3600, floating=1, captured=1, beached=0, outside=0)]
-    monkeypatch.setattr(db, "timeline", lambda run_id: points)
+def test_timeline_is_served_from_tiger(fake_db, monkeypatch):
+    stored = TimelineResponse(run_id=RUN_ID, bucket_seconds=3600, buckets=[
+        TimelineBucket(time_seconds=0, floating=7, captured=0, beached=0, outside=0)])
+    monkeypatch.setattr(db, "timeline", lambda run_id: stored)
     data = client.get(f"/api/runs/{RUN_ID}/timeline").json()
-    assert data["runId"] == RUN_ID
-    assert data["points"][1] == {"timeSeconds": 3600, "floating": 1, "captured": 1, "beached": 0, "outside": 0}
+    assert data == {"runId": RUN_ID, "bucketSeconds": 3600, "buckets": [
+        {"timeSeconds": 0, "floating": 7, "captured": 0, "beached": 0, "outside": 0}]}
 
 
-def test_timeline_returns_404_for_unknown_run(fake_db, monkeypatch):
-    monkeypatch.setattr(db, "timeline", lambda run_id: None)
-    assert client.get(f"/api/runs/{RUN_ID}/timeline").status_code == 404
+def test_timeline_falls_back_to_memory(fake_db):
+    data = client.post("/api/simulate", json=BODY).json()
+    timeline = client.get(f"/api/runs/{data['runId']}/timeline").json()
+    assert len(timeline["buckets"]) == 25
+    assert timeline["buckets"][0]["floating"] == 1
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `python -m pytest tests/test_persistence.py -q`
-Expected: failures. The run endpoints return 404 (route missing) instead of 503, `persisted` is `False`, and nothing is recorded in `fake_db`.
+Run: `.venv/Scripts/python -m pytest tests/test_persistence.py -q`
+Expected: failures. With the fake database, `persisted` is still `False`, nothing is recorded in `fake_db`, health reports `db: False`, and the Tiger replay and timeline tests get 404.
 
-- [ ] **Step 3: Wire the database into the service**
+- [ ] **Step 3: Put Tiger in front of Copernicus**
 
-In `backend/app/service.py`, change `from . import config` to:
-
-```python
-from . import config, db
-```
-
-Replace the `resolve_field` function with these three functions:
+In `backend/app/sim/snapshot.py`, replace the `load_field` function with:
 
 ```python
-def load_stored(key: SnapshotKey) -> Field | None:
+def _load_stored(key: SnapshotKey) -> Field | None:
+    from app import db  # lazy: db imports this module
+
     if not db.available():
         return None
     try:
         return db.load_snapshot(key)
-    except Exception as err:
-        log.warning("Snapshot lookup failed for %s: %r", key, err)
+    except Exception:
+        log.warning("snapshot lookup failed for %s", key, exc_info=True)
         return None
 
 
-def store(key: SnapshotKey, fld: Field) -> None:
+def _store(fld: Field) -> None:
+    from app import db  # lazy: db imports this module
+
     if not db.available():
         return
     try:
-        db.save_snapshot(key, fld)
-    except Exception as err:
-        log.warning("Snapshot save failed for %s: %r", key, err)
+        db.save_snapshot(fld)
+    except Exception:
+        log.warning("snapshot save failed for %s", fld.key, exc_info=True)
 
 
-def resolve_field(key: SnapshotKey) -> Field:
-    """Memory, then Tiger, then Copernicus, then a synthetic field.
-    Only real snapshots are cached or stored, so the real source is retried next time."""
-    if key in _memory:
-        return _memory[key]
-    fld = load_stored(key)
+def load_field(key: SnapshotKey) -> Field:
+    """Field for the key: memory, then Tiger, then Copernicus, then a synthetic gyre.
+
+    Real snapshots are stored in Tiger and cached for the process. A fallback is reused
+    for SYNTHETIC_RETRY_S so one request sees one field per box, then the real sources
+    are tried again. Fallbacks are never stored.
+    """
+    cached = _cached(key)
+    if cached is not None:
+        return cached
+    fld = _load_stored(key)
     if fld is None:
-        fld = fetch_with_timeout(key)
+        fld = _fetch_with_timeout(key)
         if fld is None:
-            return synthetic_field(key)
-        store(key, fld)
-    remember(key, fld)
-    return fld
+            return _remember(key, synthetic_field(key), ttl=config.SYNTHETIC_RETRY_S)
+        _store(fld)
+    return _remember(key, fld)
 ```
 
-Replace the `persist` function with:
+- [ ] **Step 4: Persist and replay runs in the routes**
+
+In `backend/app/routes.py`:
+
+Add `import logging` above `import uuid`, change `from app import config` to `from app import config, db`, and add below `_runs: OrderedDict[...] = OrderedDict()`:
 
 ```python
-def persist(response: SimulateResponse, req: SimulateRequest, fields: dict,
-            slice_time: datetime, parent_run_id: str | None) -> bool:
+log = logging.getLogger(__name__)
+```
+
+Replace the `_remember` function with:
+
+```python
+def _persist(resp: SimulateResponse, req: SimulateRequest, fields: dict[str, Field],
+             parent_run_id: str | None) -> bool:
     """Store the run in Tiger. A database problem never fails the request."""
     if not db.available():
         return False
+    start_time = next(iter(fields.values())).key.slice_time  # one slice time per run
     try:
-        db.save_run(response, req, fields, slice_time, parent_run_id)
+        db.save_run(resp, req, start_time, parent_run_id)
         return True
-    except Exception as err:
-        log.warning("Run save failed for %s: %r", response.run_id, err)
+    except Exception:
+        log.warning("run save failed for %s", resp.run_id, exc_info=True)
         return False
+
+
+def _remember(resp: SimulateResponse, req: SimulateRequest, fields: dict[str, Field],
+              parent_run_id: str | None = None) -> None:
+    resp.persisted = _persist(resp, req, fields, parent_run_id)
+    _runs[resp.run_id] = resp  # memory copy: the fallback when Tiger is down
+    while len(_runs) > MAX_STORED_RUNS:
+        _runs.popitem(last=False)
 ```
 
-- [ ] **Step 4: Add the endpoints and the lifespan**
-
-In `backend/app/routes.py`, change the imports to:
+Change the `build_response` signature to:
 
 ```python
-import uuid
-
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import JSONResponse
-
-from . import config, db, service
-from .schemas import (
-    CompareResponse, CurrentsResponse, MetaResponse, SimulateRequest, SimulateResponse,
-    TimelineResponse,
-)
+def build_response(
+    req: SimulateRequest, fields: dict[str, Field], *, honour_collectors: bool = True,
+    parent_run_id: str | None = None,
+) -> SimulateResponse:
 ```
 
-Replace the `health` function with:
+and at its end change `_remember(resp)` to:
 
 ```python
-@router.get("/health")
-def health() -> dict:
-    return {"status": "ok", "db": db.ping()}
+    _remember(resp, req, fields, parent_run_id)
 ```
 
-Append to the end of the file:
+In `compare`, change the line building `with_` to:
 
 ```python
-def checked_run_id(run_id: str) -> str:
+    with_ = build_response(req, fields, honour_collectors=True, parent_run_id=without.run_id)
+```
+
+Replace the `health` endpoint with:
+
+```python
+@router.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(ok=True, db=db.ping())
+```
+
+Replace `_get_run`, `get_run` and `get_timeline` (the last three definitions in the file) with:
+
+```python
+def _tiger_run_id(run_id: str) -> str | None:
+    """The canonical UUID string when Tiger can be asked about this id, else None."""
     if not db.available():
-        raise HTTPException(status_code=503, detail="database unavailable")
+        return None
     try:
         return str(uuid.UUID(run_id))
     except ValueError:
-        raise HTTPException(status_code=404, detail="run not found")
+        return None
+
+
+def _memory_run(run_id: str) -> SimulateResponse:
+    resp = _runs.get(run_id)
+    if resp is None:
+        raise ApiError(404, "run_not_found", f"No run with id {run_id}")
+    return resp
 
 
 @router.get("/runs/{run_id}", response_model=SimulateResponse)
-def get_run(run_id: str):
-    run_id = checked_run_id(run_id)
-    try:
-        run = db.load_run(run_id)
-    except Exception:
-        raise HTTPException(status_code=503, detail="database unavailable")
-    if run is None:
-        raise HTTPException(status_code=404, detail="run not found")
-    return run
+def get_run(run_id: str) -> SimulateResponse:
+    tiger_id = _tiger_run_id(run_id)
+    if tiger_id is not None:
+        try:
+            stored = db.load_run(tiger_id)
+            if stored is not None:
+                return stored
+        except Exception:
+            log.warning("run load failed for %s, trying memory", run_id, exc_info=True)
+    return _memory_run(run_id)
 
 
 @router.get("/runs/{run_id}/timeline", response_model=TimelineResponse)
-def get_timeline(run_id: str):
-    run_id = checked_run_id(run_id)
-    try:
-        points = db.timeline(run_id)
-    except Exception:
-        raise HTTPException(status_code=503, detail="database unavailable")
-    if points is None:
-        raise HTTPException(status_code=404, detail="run not found")
-    return TimelineResponse(run_id=run_id, points=points)
+def get_timeline(run_id: str) -> TimelineResponse:
+    tiger_id = _tiger_run_id(run_id)
+    if tiger_id is not None:
+        try:
+            stored = db.timeline(tiger_id)
+            if stored is not None:
+                return stored
+        except Exception:
+            log.warning("timeline query failed for %s, trying memory", run_id, exc_info=True)
+    return timeline_of(_memory_run(run_id))
 ```
 
-Replace `backend/app/main.py` with:
+- [ ] **Step 5: Open the pool with the app**
+
+In `backend/app/main.py`, add to the imports:
 
 ```python
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-from . import config, db
-from .routes import router
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    db.init_pool()  # returns False and carries on if Tiger is unreachable
-    yield
-    db.close_pool()
-
-
-def create_app() -> FastAPI:
-    app = FastAPI(title="PlasticPaths simulation API", lifespan=lifespan)
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[config.CORS_ORIGIN],
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    app.include_router(router, prefix="/api")
-    return app
-
-
-app = create_app()
+from app import config, db
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+(replacing the existing `from app import config` line), add above `create_app`:
 
-Run: `python -m pytest -q`
-Expected: 77 passed.
+```python
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db.init_pool()  # returns False and carries on when Tiger is unreachable
+    yield
+    db.close_pool()
+```
 
-- [ ] **Step 6: End-to-end smoke test against real Copernicus and real Tiger**
+and change the `FastAPI(...)` call to:
+
+```python
+    app = FastAPI(title="PlasticPaths simulation API", version="0.1.0", lifespan=lifespan)
+```
+
+- [ ] **Step 6: Run tests to verify they pass**
+
+Run: `.venv/Scripts/python -m pytest -q`
+Expected: 56 passed.
+
+Then regenerate the fixtures to prove the response shapes did not change:
+
+Run: `.venv/Scripts/python scripts/make_fixtures.py && git status --short scripts/fixtures`
+Expected: no output from `git status`. The script uses fixed ids, so the regenerated fixtures must be byte-identical. If any file shows as modified, a response shape changed: stop and fix the code, not the fixture.
+
+- [ ] **Step 7: End-to-end smoke test against real Copernicus and real Tiger**
 
 Create `backend/scripts/smoke.py`:
 
 ```python
 """Manual end-to-end check against a running server.
-Start the server, then from backend/:  python -m scripts.smoke [base_url]"""
+Start the server, then from backend/:  python scripts/smoke.py [base_url]"""
 import sys
 import time
 
@@ -2710,12 +1428,11 @@ assert run["persisted"] is True, "run was not stored"
 assert all(s["source"] == "copernicus" for s in run["snapshots"]), "fell back to synthetic currents"
 
 replay = client.get(f"/api/runs/{run['runId']}").json()
-assert replay["trajectories"] == run["trajectories"], "replay differs from the original run"
-assert replay["summary"] == run["summary"]
+assert replay == run, "replay from Tiger differs from the original run"
 
-timeline = client.get(f"/api/runs/{run['runId']}/timeline").json()["points"]
-assert len(timeline) == 7 * 24 + 1, f"expected 169 hourly points, got {len(timeline)}"
-assert all(sum(p[k] for k in ("floating", "captured", "beached", "outside")) == 2 for p in timeline)
+timeline = client.get(f"/api/runs/{run['runId']}/timeline").json()
+assert len(timeline["buckets"]) == 7 * 24 + 1, f"expected 169 hourly buckets, got {len(timeline['buckets'])}"
+assert all(sum(b[k] for k in ("floating", "captured", "beached", "outside")) == 2 for b in timeline["buckets"])
 
 started = time.monotonic()
 client.post("/api/simulate", json=body)
@@ -2723,73 +1440,44 @@ print(f"second run (snapshots cached): {time.monotonic() - started:.1f}s")
 print("PASS")
 ```
 
-Run the server (`python -m uvicorn app.main:app --port 8000`), then `python -m scripts.smoke`.
-Expected: `health: {'status': 'ok', 'db': True}`, a compare time of a few seconds, `source: ['copernicus', ...]`, `persisted: True`, a second run clearly faster than the first, and `PASS`.
+Start the server (`.venv/Scripts/python -m uvicorn app.main:app --port 8000`), then run `.venv/Scripts/python scripts/smoke.py`.
+Expected: `health: {'ok': True, 'db': True}`, a compare time of a few seconds, both sources `copernicus`, `persisted: True`, a second run clearly faster than the first, and `PASS`.
 
-Then restart the server and run the smoke script again within the same clock hour.
-Expected: `PASS`, and the first compare is fast this time because the snapshots load from Tiger instead of Copernicus. Snapshots are keyed by the hour, so after the hour rolls over a fresh fetch is correct behaviour.
+Restart the server and run the smoke script again within the same clock hour.
+Expected: `PASS`, and the first compare is fast because the snapshots now load from Tiger. Snapshots are keyed by the hour, so a fresh fetch after the hour rolls over is correct.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add app/service.py app/routes.py app/main.py scripts/smoke.py tests/test_persistence.py
-git commit -m "feat(backend): persist runs and snapshots in Tiger Data, replay and timeline endpoints"
+git add app/sim/snapshot.py app/routes.py app/main.py scripts/smoke.py tests/test_persistence.py
+git commit -m "feat(backend): persist runs and snapshots in Tiger Data, replay and timeline from hypertables"
 ```
 
 ---
 
-### Task 8: Handoff, container and Tiger polish (Phase 4)
+### Task 5: Handoff, container and Tiger polish
 
 **Files:**
-- Create: `backend/README.md`, `backend/Dockerfile`, `backend/.dockerignore`, `backend/scripts/compression.sql`
+- Modify: `backend/README.md`
+- Create: `backend/Dockerfile`, `backend/.dockerignore`, `backend/scripts/compression.sql`
 
 **Interfaces:**
-- Consumes: the running API from Tasks 1 to 7.
-- Produces: a container image that serves the API on `$PORT`, and the document the other streams integrate from.
+- Consumes: the running API from Tasks 1 to 4.
+- Produces: a container image serving the API on `$PORT`, and the document the other streams integrate from.
 
-- [ ] **Step 1: Write the backend README**
+- [ ] **Step 1: Update the README**
 
-Create `backend/README.md`:
+In `backend/README.md`, replace the `## Status` section (heading and bullets) with:
 
 ````markdown
-# PlasticPaths backend (stream 3)
+## One-time setup for real data
 
-FastAPI service that simulates floating litter drifting on real ocean currents and stores every run in Tiger Data.
-
-## Run locally
-
-```bash
-cd backend
-python -m venv .venv && source .venv/Scripts/activate   # Windows Git Bash
-pip install -r requirements.txt
-cp .env.example .env        # fill in Copernicus and Tiger credentials
-python -m scripts.init_db   # once, creates the tables and hypertables
-python -m uvicorn app.main:app --port 8000 --reload
+```powershell
+.venv\Scripts\python scripts\init_db.py          # creates the Tiger tables and hypertables
+.venv\Scripts\python scripts\smoke_copernicus.py # proves the Copernicus credentials work
 ```
 
-Interactive docs: http://localhost:8000/docs. Tests: `python -m pytest -q` (no network or database needed).
-
-The server works with no credentials at all: it falls back to synthetic currents (`"source": "synthetic"`) and skips storage (`"persisted": false`).
-
-## Endpoints
-
-| Method and path | Purpose |
-|---|---|
-| GET /api/health | liveness and database flag |
-| GET /api/meta | duration limits, defaults, litter types, attribution and limitations |
-| GET /api/currents?lon&lat&durationDays | arrows for the map: `coordinates`, `u`, `v`, `speed`, `bearing` (degrees clockwise from north) |
-| POST /api/simulate | run one experiment, returns `trajectories` as the frontend's `ParticleTrajectory[]` |
-| POST /api/compare | same placements without and with collectors: `{without, with, delta}` |
-| GET /api/runs/{runId} | replay a stored run |
-| GET /api/runs/{runId}/timeline | status counts per hour |
-
-Request body for simulate and compare is the frontend's `Placement[]` plus an optional duration:
-
-```json
-{"placements": [{"id": "bottle-1", "type": "bottle", "coordinates": [-140.2, 32.1]}], "durationDays": 7}
-```
-
-A drop on land returns HTTP 422 with `{"code": "on_land", "message": "...", "placementId": "..."}`.
+With no credentials at all the server still runs: currents are synthetic (`"source": "synthetic"`) and runs are kept in memory (`"persisted": false`).
 
 ## Frontend integration
 
@@ -2803,12 +1491,12 @@ export async function fetchTrajectories(placements: Placement[], durationDays = 
     body: JSON.stringify({ placements, durationDays }),
   });
   const data = await response.json();
-  if (!response.ok) throw data;            // data.code === "on_land" for a drop on land
-  return data;                             // data.trajectories is ParticleTrajectory[]
+  if (!response.ok) throw data;   // data.code is "on_land" (with placementId) or "invalid_request"
+  return data;                    // data.trajectories is ParticleTrajectory[]
 }
 ```
 
-Use `data.totalSeconds` for the timeline length instead of the fixed `DURATION_SECONDS`. `interpolateFrame`, `trailGeoJson` and `particleGeoJson` work unchanged.
+Use `data.totalSeconds` for the timeline length instead of the fixed `DURATION_SECONDS`. `interpolateFrame`, `trailGeoJson` and `particleGeoJson` work unchanged. Near the antimeridian a trajectory's longitude may run slightly past 180 so the trail stays continuous.
 
 ## How the simulation works
 
@@ -2819,18 +1507,25 @@ Use `data.totalSeconds` for the timeline length instead of the fixed `DURATION_S
 
 ## Tiger Data
 
-Two hypertables do real work: `current_samples` caches every fetched snapshot (drops in the same area and hour reuse it, even across restarts), and `positions` stores every recorded sample of every run. The timeline endpoint is one `time_bucket` query:
+Two hypertables do real work. `current_samples` caches every fetched snapshot, so drops in the same area and hour reuse it even across restarts. `positions` stores every recorded sample of every run and is what replay reads. The timeline endpoint is one `time_bucket` query:
 
 ```sql
 SELECT time_bucket('1 hour', time) AS bucket, status, count(*)
 FROM positions WHERE run_id = $1 GROUP BY bucket, status ORDER BY bucket;
 ```
 
-Where each item started and ended, using Timescale's `first` and `last`:
+Where each item started and ended, using `first` and `last`:
 
 ```sql
 SELECT item_id, first(lon, time), first(lat, time), last(lon, time), last(lat, time), last(status, time)
 FROM positions WHERE run_id = $1 GROUP BY item_id;
+```
+
+How much each collector placement helped, across every comparison ever run:
+
+```sql
+SELECT w.run_id, (w.summary->>'captured')::int - (o.summary->>'captured')::int AS extra_captured
+FROM runs w JOIN runs o ON o.run_id = w.parent_run_id ORDER BY extra_captured DESC;
 ```
 ````
 
@@ -2839,15 +1534,17 @@ FROM positions WHERE run_id = $1 GROUP BY item_id;
 Create `backend/Dockerfile`:
 
 ```dockerfile
-FROM python:3.12-slim
+FROM python:3.13-slim
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml .
 COPY app ./app
+RUN pip install --no-cache-dir -e .
 COPY scripts ./scripts
 ENV PORT=8000
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
 ```
+
+The install is editable on purpose: `app/db.py` finds `scripts/schema.sql` relative to the source tree.
 
 Create `backend/.dockerignore`:
 
@@ -2855,8 +1552,10 @@ Create `backend/.dockerignore`:
 .venv
 .env
 __pycache__
-tests
+*.egg-info
 .pytest_cache
+.ruff_cache
+tests
 ```
 
 - [ ] **Step 3: Verify the container**
@@ -2866,7 +1565,7 @@ docker build -t plasticpaths-backend .
 docker run --rm -p 8000:8000 --env-file .env plasticpaths-backend
 ```
 
-In another terminal run: `python -m scripts.smoke`
+In another terminal: `.venv/Scripts/python scripts/smoke.py`
 Expected: `PASS`. If Docker is not installed on this machine, skip this step, say so in the commit message, and verify on the deployment host instead.
 
 - [ ] **Step 4: Add the compression policy**
@@ -2889,29 +1588,29 @@ ALTER TABLE current_samples SET (
 SELECT add_compression_policy('current_samples', INTERVAL '1 day', if_not_exists => TRUE);
 ```
 
-Apply it once from the Tiger console SQL editor or with `psql "$DATABASE_URL" -f scripts/compression.sql`.
-Expected: two policy job ids returned. Then rerun `python -m scripts.smoke`; expected `PASS` (compressed chunks stay readable and writable).
+Apply it once from the Tiger console SQL editor.
+Expected: two policy job ids. Then rerun `.venv/Scripts/python scripts/smoke.py`; expected `PASS`.
 
-- [ ] **Step 5: Final full check and commit**
+- [ ] **Step 5: Final check and commit**
 
-Run: `python -m pytest -q`
-Expected: 77 passed.
+Run: `.venv/Scripts/python -m pytest -q`
+Expected: 56 passed.
 
 ```bash
 git add README.md Dockerfile .dockerignore scripts/compression.sql
-git commit -m "docs(backend): README, container image and Tiger compression policy"
+git commit -m "docs(backend): integration README, container image and Tiger compression policy"
 ```
 
 - [ ] **Step 6: Deploy (only when the team picks a host)**
 
-On Render or Fly, create a web service from `backend/Dockerfile`, set the four variables from `.env.example` as secrets with `CORS_ORIGIN` set to the deployed frontend origin, then run `python -m scripts.smoke https://<deployed-host>`.
+On Render or Fly, create a web service from `backend/Dockerfile`, set the four variables from `.env.example` as secrets with `CORS_ORIGIN` set to the deployed frontend origin, then run `.venv/Scripts/python scripts/smoke.py https://<deployed-host>`.
 Expected: `PASS`.
 
 ---
 
 ## Later, not in this plan
 
-- **Multi-slice currents.** `Field.sample` already takes `t_seconds` and picks the slice by hour; `SnapshotKey.n_slices`, `snapshot_rows` and `field_from_rows` already carry a time axis. The change is: fetch `n_slices` hours in `copernicus.fetch_field`, keep every slice in `field_from_dataset`, set `USE_TIDE = True`, and pass the slice count through `key_for`.
+- **Multi-slice currents.** `Field` already has a `times` axis and picks the nearest slice; `SnapshotKey.n_slices`, `snapshot_rows` and `field_from_rows` already carry it. The change is: request `n_slices` hours in `fetch_copernicus`, keep every slice in `field_from_dataset`, and set `APPLY_TIDE = True`.
+- **Antimeridian with real data.** Fetch the two halves of a crossing box and join them in the box's continuous longitude frame, instead of cutting at 180.
 - **Item-specific drift.** Change the values in `config.DRIFT_FACTOR` and document the source.
-- **Speed.** Vectorise the engine loop across items with NumPy.
 
