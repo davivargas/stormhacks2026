@@ -26,7 +26,7 @@ interface OceanMapProps {
 }
 
 const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-const styleUrl = import.meta.env.VITE_MAPBOX_STYLE_URL || "mapbox://styles/mapbox/standard";
+const styleUrl = import.meta.env.VITE_MAPBOX_STYLE_URL || "mapbox://styles/mapbox/light-v11";
 
 function collectorsGeoJson(placements: Placement[]) {
   return featureCollection(
