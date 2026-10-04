@@ -9,7 +9,7 @@ import uuid
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Path, Query
 
 from app import config, db
 from app.schemas import (
@@ -18,12 +18,14 @@ from app.schemas import (
     CompareResponse,
     CurrentArrow,
     CurrentsResponse,
+    DeleteRunsResponse,
     DurationRange,
     HealthResponse,
     ItemResult,
     MetaDefaults,
     MetaResponse,
     ParticleTrajectory,
+    SESSION_ID_PATTERN,
     SimulateRequest,
     SimulateResponse,
     SnapshotInfo,
@@ -40,6 +42,7 @@ router = APIRouter(prefix="/api")
 
 MAX_STORED_RUNS = 200
 _runs: OrderedDict[str, SimulateResponse] = OrderedDict()
+_run_sessions: dict[str, str] = {}  # run id -> session id, for the runs that came with one
 log = logging.getLogger(__name__)
 
 
@@ -87,8 +90,11 @@ def _remember(resp: SimulateResponse, req: SimulateRequest, fields: dict[str, Fi
               parent_run_id: str | None = None) -> None:
     resp.persisted = _persist(resp, req, fields, parent_run_id)
     _runs[resp.run_id] = resp  # memory copy: the fallback when Tiger is down
+    if req.session_id is not None:
+        _run_sessions[resp.run_id] = req.session_id
     while len(_runs) > MAX_STORED_RUNS:
-        _runs.popitem(last=False)
+        evicted, _ = _runs.popitem(last=False)
+        _run_sessions.pop(evicted, None)
 
 
 def load_fields(req: SimulateRequest) -> dict[str, Field]:
@@ -309,3 +315,23 @@ def get_timeline(run_id: str) -> TimelineResponse:
             log.warning("timeline query failed for %s, trying memory", run_id, exc_info=True)
             db.report_failure()
     return timeline_of(_memory_run(run_id))
+
+
+@router.delete("/sessions/{session_id}/runs", response_model=DeleteRunsResponse)
+def delete_session_runs(
+    session_id: str = Path(min_length=1, max_length=64, pattern=SESSION_ID_PATTERN),
+) -> DeleteRunsResponse:
+    """Forget every run one browser session made: in memory and in Tiger."""
+    mine = [run_id for run_id, owner in list(_run_sessions.items()) if owner == session_id]
+    for run_id in mine:
+        _runs.pop(run_id, None)
+        _run_sessions.pop(run_id, None)
+    if not db.configured():
+        return DeleteRunsResponse(deleted=len(mine), database="unavailable")
+    if db.available():
+        try:
+            return DeleteRunsResponse(deleted=db.delete_session_runs(session_id), database="cleared")
+        except Exception:
+            log.warning("run delete failed for session %s", session_id, exc_info=True)
+            db.report_failure()
+    return DeleteRunsResponse(deleted=len(mine), database="failed")
