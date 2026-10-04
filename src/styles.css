@@ -521,16 +521,16 @@ input:focus-visible {
 .mascot {
   position: relative;
   display: flex;
-  flex: 0 0 86px;
+  flex: 0 0 69px;
   align-items: center;
   justify-content: center;
-  width: 86px;
-  height: 78px;
+  width: 69px;
+  height: 62px;
 }
 
 .cartoon-turtle {
-  width: 88px;
-  height: 59px;
+  width: 70px;
+  height: 47px;
   display: block;
   object-fit: contain;
   overflow: visible;
@@ -786,14 +786,14 @@ input:focus-visible {
   }
 
   .mascot {
-    flex-basis: 68px;
-    width: 68px;
-    height: 62px;
+    flex-basis: 55px;
+    width: 55px;
+    height: 50px;
   }
 
   .cartoon-turtle {
-    width: 71px;
-    height: 46px;
+    width: 57px;
+    height: 37px;
   }
 
   .timeline {
