@@ -14,15 +14,18 @@ import {
   Waves,
 } from "lucide-react";
 import { OceanMap } from "./OceanMap";
+import { requestSimulation } from "./simulationApi";
+import type { SimulateResponse } from "./simulationApi";
 import { requestOceanStory, requestStoryAudio } from "./storyApi";
 import type { StorySimulationSummary } from "./storyApi";
 import {
-  buildTrajectories,
-  DURATION_SECONDS,
   INITIAL_PLACEMENTS,
   interpolateFrame,
 } from "./simulation";
-import type { ComparisonMode, Coordinates, ParticleTrajectory, Placement, Tool } from "./types";
+import type { ComparisonMode, Coordinates, ParticleStatus, Placement, Tool } from "./types";
+
+const SIMULATION_DURATION_DAYS = 1;
+const DEFAULT_DURATION_SECONDS = SIMULATION_DURATION_DAYS * 24 * 60 * 60;
 
 const tools: Array<{ id: Tool; label: string; detail: string; icon: typeof CupSoda }> = [
   { id: "bottle", label: "Bottle", detail: "Place in water", icon: CupSoda },
@@ -39,18 +42,20 @@ function formatTime(seconds: number) {
 }
 
 function buildStorySummary(
-  trajectories: ParticleTrajectory[],
-  comparison: ComparisonMode,
+  simulationRun: SimulateResponse | null,
   selectedParticleId: string | null,
 ): StorySimulationSummary | null {
+  const trajectories = simulationRun?.trajectories ?? [];
   const trajectory = trajectories.find(({ id }) => id === selectedParticleId) ?? trajectories[0];
-  if (!trajectory) return null;
+  if (!simulationRun || !trajectory) return null;
 
   const lastSample = trajectory.samples.at(-1);
   if (!lastSample) return null;
+  const item = simulationRun.items.find(({ id }) => id === trajectory.id);
+  const finalStatus = item?.finalStatus ?? lastSample.status;
 
   const events: StorySimulationSummary["events"] = [
-    { elapsed_hours: 0, type: "released", location: "Salish Sea" },
+    { elapsed_hours: 0, type: "released", location: "the ocean" },
   ];
   let previousStatus = trajectory.samples[0]?.status ?? "floating";
 
@@ -65,24 +70,31 @@ function buildStorySummary(
 
   if (events.length === 1) {
     events.push({
-      elapsed_hours: DURATION_SECONDS / 3600,
+      elapsed_hours: simulationRun.totalSeconds / 3600,
       type: "still_floating",
     });
   }
 
   return {
-    simulation_id: `map-${comparison}-${trajectory.id}`,
+    simulation_id: simulationRun.runId,
     litter_type: `plastic_${trajectory.type}`,
     particle_id: trajectory.id,
-    duration_hours: DURATION_SECONDS / 3600,
+    duration_hours: simulationRun.totalSeconds / 3600,
     events,
-    final_status: lastSample.status === "outside" ? "outside_domain" : lastSample.status,
+    final_status: finalStatus === "outside" ? "outside_domain" : finalStatus,
     assumptions: [
-      "Ocean currents only",
-      "Wind and waves are excluded",
-      "The plastic does not sink or break down",
+      "This path follows ocean current data",
+      ...simulationRun.attribution.limitations,
     ],
   };
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+function statusLabel(status: ParticleStatus) {
+  return status === "outside" ? "outside the map" : status;
 }
 
 function App() {
@@ -96,23 +108,24 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   const [isPlaying, setIsPlaying] = useState(false);
   const [isNarrating, setIsNarrating] = useState(false);
   const [isPreparingNarration, setIsPreparingNarration] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationRun, setSimulationRun] = useState<SimulateResponse | null>(null);
+  const [simulationError, setSimulationError] = useState<string | null>(null);
   const [message, setMessage] = useState("Choose a litter type, then click the ocean to place it.");
   const lastFrameRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const narrationSignatureRef = useRef<string | null>(null);
   const playbackRequestRef = useRef(0);
 
-  const trajectories = useMemo(
-    () => buildTrajectories(placements, comparison),
-    [placements, comparison],
-  );
+  const durationSeconds = simulationRun?.totalSeconds ?? DEFAULT_DURATION_SECONDS;
+  const trajectories = useMemo(() => simulationRun?.trajectories ?? [], [simulationRun]);
   const frames = useMemo(
     () => interpolateFrame(trajectories, timeSeconds),
     [trajectories, timeSeconds],
   );
   const storySummary = useMemo(
-    () => buildStorySummary(trajectories, comparison, selectedParticleId),
-    [trajectories, comparison, selectedParticleId],
+    () => buildStorySummary(simulationRun, selectedParticleId),
+    [simulationRun, selectedParticleId],
   );
   const storySignature = useMemo(
     () => (storySummary ? JSON.stringify(storySummary) : null),
@@ -136,6 +149,42 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     setIsNarrating(false);
     audioRef.current?.pause();
   };
+
+  useEffect(() => {
+    const hasLitter = placements.some(({ type }) => type !== "collector");
+    if (!hasLitter) {
+      setSimulationRun(null);
+      setSimulationError(null);
+      setIsSimulating(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsSimulating(true);
+    setSimulationError(null);
+
+    requestSimulation(placements, {
+      durationDays: SIMULATION_DURATION_DAYS,
+      honourCollectors: comparison === "with",
+      signal: controller.signal,
+    })
+      .then((run) => {
+        setSimulationRun(run);
+        setTimeSeconds((current) => Math.min(current, run.totalSeconds));
+      })
+      .catch((error) => {
+        if (isAbortError(error)) return;
+        const detail = error instanceof Error ? error.message : "Could not run the ocean simulation.";
+        setSimulationRun(null);
+        setSimulationError(detail);
+        setMessage(`${detail} Try another ocean spot or restart the backend.`);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsSimulating(false);
+      });
+
+    return () => controller.abort();
+  }, [placements, comparison]);
 
   useEffect(() => {
     if (narrationSignatureRef.current === null) {
@@ -176,9 +225,9 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       lastFrameRef.current = timestamp;
       setTimeSeconds((current) => {
         const next = current + elapsed * 12;
-        if (next >= DURATION_SECONDS) {
+        if (next >= durationSeconds) {
           setIsPlaying(false);
-          return DURATION_SECONDS;
+          return durationSeconds;
         }
         return next;
       });
@@ -186,7 +235,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     };
     requestId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(requestId);
-  }, [isPlaying, isNarrating]);
+  }, [durationSeconds, isPlaying, isNarrating]);
 
   const playNarration = async (audio: HTMLAudioElement) => {
     if (audio.ended || audio.currentTime >= audio.duration - 0.05) {
@@ -209,10 +258,20 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       return;
     }
 
-    if (timeSeconds >= DURATION_SECONDS) setTimeSeconds(0);
+    if (timeSeconds >= durationSeconds) setTimeSeconds(0);
 
     if (audioRef.current && narrationSignatureRef.current === storySignature) {
       await playNarration(audioRef.current);
+      return;
+    }
+
+    if (isSimulating) {
+      setMessage("Waiting for the real ocean simulation to finish...");
+      return;
+    }
+
+    if (simulationError) {
+      setMessage(`${simulationError} The story needs a successful backend simulation first.`);
       return;
     }
 
@@ -242,7 +301,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       audio.onended = () => {
         setIsNarrating(false);
         setIsPlaying(false);
-        setTimeSeconds(DURATION_SECONDS);
+        setTimeSeconds(durationSeconds);
       };
       audio.onerror = () => {
         setIsNarrating(false);
@@ -251,7 +310,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       };
       audio.ontimeupdate = () => {
         if (Number.isFinite(audio.duration) && audio.duration > 0) {
-          setTimeSeconds((audio.currentTime / audio.duration) * DURATION_SECONDS);
+          setTimeSeconds((audio.currentTime / audio.duration) * durationSeconds);
         }
       };
       audioRef.current = audio;
@@ -272,10 +331,10 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     const item: Placement = { id: `${tool}-${crypto.randomUUID()}`, type: tool, coordinates, placedAtSeconds: timeSeconds };
     setPlacements((current) => [...current, item]);
     if (item.type === "collector") {
-      setMessage("Great cleanup spot! Try the comparison.");
+      setMessage("Great cleanup spot! Running the ocean simulation again...");
     } else {
       setSelectedParticleId(item.id);
-      setMessage(`${item.type[0].toUpperCase()}${item.type.slice(1)} selected! Press play for its story.`);
+      setMessage(`${item.type[0].toUpperCase()}${item.type.slice(1)} selected! Running the ocean simulation...`);
     }
   };
 
@@ -284,7 +343,9 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     if (!trajectory) return;
     stopPlayback();
     setSelectedParticleId(id);
-    setMessage(`${trajectory.type[0].toUpperCase()}${trajectory.type.slice(1)} selected! Press play for its journey.`);
+    const item = simulationRun?.items.find(({ id: itemId }) => itemId === trajectory.id);
+    const finalStatus = item ? ` It ends ${statusLabel(item.finalStatus)}.` : "";
+    setMessage(`${trajectory.type[0].toUpperCase()}${trajectory.type.slice(1)} selected from the backend run.${finalStatus} Press play for its journey.`);
   };
 
   const removeItem = (id: string) => {
@@ -296,7 +357,9 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     stopPlayback();
     if (audioRef.current) audioRef.current.currentTime = 0;
     setTimeSeconds(0);
-    setMessage("Choose a litter type, then click the ocean to place it.");
+    setMessage(placements.some(({ type }) => type !== "collector")
+      ? "Restarted the backend simulation playback."
+      : "Choose a litter type, then click the ocean to place it.");
   };
 
   return (
@@ -385,17 +448,17 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
                 id="timeline-range"
                 type="range"
                 min="0"
-                max={DURATION_SECONDS}
+                max={durationSeconds}
                 step="300"
                 value={timeSeconds}
                 aria-valuetext={formatTime(timeSeconds)}
-                style={{ "--progress": `${(timeSeconds / DURATION_SECONDS) * 100}%` } as React.CSSProperties}
+                style={{ "--progress": `${durationSeconds > 0 ? (timeSeconds / durationSeconds) * 100 : 0}%` } as React.CSSProperties}
                 onChange={(event) => {
                   stopPlayback();
                   const nextTime = Number(event.target.value);
                   setTimeSeconds(nextTime);
                   if (audioRef.current && Number.isFinite(audioRef.current.duration)) {
-                    audioRef.current.currentTime = (nextTime / DURATION_SECONDS) * audioRef.current.duration;
+                    audioRef.current.currentTime = (nextTime / durationSeconds) * audioRef.current.duration;
                   }
                 }}
               />
