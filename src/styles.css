@@ -95,7 +95,7 @@ input:focus-visible {
 }
 
 .mapboxgl-ctrl-top-right {
-  top: 88px;
+  top: 16px;
   right: 14px;
 }
 
@@ -782,6 +782,11 @@ input:focus-visible {
     left: 10px;
     min-height: 57px;
     border-radius: 19px;
+  }
+
+  .mapboxgl-ctrl-top-right {
+    top: 10px;
+    right: 10px;
   }
 
   .brand {
