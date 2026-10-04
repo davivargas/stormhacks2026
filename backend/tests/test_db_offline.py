@@ -75,3 +75,33 @@ def test_database_is_unavailable_without_a_url():
     assert db.init_pool() is False
     assert db.available() is False
     assert db.ping() is False
+
+
+def test_slow_database_at_startup_is_retried_not_abandoned(monkeypatch):
+    # Seen live: Tiger took longer than the open timeout once at startup, and the server then
+    # stayed disconnected until a restart. The pool keeps connecting in the background; keep it.
+    from psycopg_pool import PoolTimeout
+
+    from app import config, db
+
+    class SlowPool:
+        check_connection = staticmethod(lambda conn: None)  # referenced when the pool is built
+
+        def __init__(self, *args, **kwargs):
+            self.closed = False
+
+        def open(self, wait=True, timeout=None):
+            raise PoolTimeout("pool initialization incomplete")
+
+        def close(self):
+            self.closed = True
+
+    monkeypatch.setattr(config, "DATABASE_URL", "postgres://example.invalid/db")
+    monkeypatch.setattr(db, "ConnectionPool", SlowPool)
+    monkeypatch.setattr(db, "_pool", None)
+    assert db.init_pool() is False
+    assert isinstance(db._pool, SlowPool) and not db._pool.closed
+    assert db.available() is False  # skipped during the cooldown
+    monkeypatch.setattr(config, "DATABASE_RETRY_S", 0)
+    db.report_failure()
+    assert db.available() is True  # tried again after the cooldown

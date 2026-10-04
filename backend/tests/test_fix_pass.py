@@ -16,7 +16,7 @@ client = TestClient(app)
 
 T0 = datetime(2026, 10, 3, 18, tzinfo=UTC)
 KEY1 = make_key(10.2, -20.1, 1, T0)  # half-width 1.5
-KEY7 = make_key(10.2, -20.1, 7, T0)  # half-width 4.0, same centre
+KEY7 = make_key(10.2, -20.1, 7, T0)  # half-width 6.5, same centre
 BODY = {"placements": [{"id": "bottle-1", "type": "bottle", "coordinates": [10.2, -20.1]}], "durationDays": 1}
 
 

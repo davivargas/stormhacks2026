@@ -3552,528 +3552,528 @@
           {
             "timeSeconds": 370800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.53495,
+              48.83544
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 374400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.57425,
+              48.8387
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 378000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.61356,
+              48.84196
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 381600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.65287,
+              48.84521
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 385200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.69219,
+              48.84847
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 388800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.7315,
+              48.85173
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 392400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.77082,
+              48.85498
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 396000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.81014,
+              48.85824
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 399600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.84947,
+              48.8615
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 403200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.88879,
+              48.86475
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 406800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.92812,
+              48.86801
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 410400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.96746,
+              48.87127
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 414000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.00679,
+              48.87453
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 417600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.04613,
+              48.87778
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 421200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.08547,
+              48.88104
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 424800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.12481,
+              48.8843
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 428400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.16415,
+              48.88755
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 432000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.2035,
+              48.89081
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 435600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.24285,
+              48.89407
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 439200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.2822,
+              48.89732
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 442800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.32156,
+              48.90058
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 446400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.36092,
+              48.90384
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 450000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.40028,
+              48.90709
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 453600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.43964,
+              48.91035
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 457200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.479,
+              48.91361
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 460800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.51837,
+              48.91686
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 464400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.55774,
+              48.92012
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 468000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.59711,
+              48.92338
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 471600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.63649,
+              48.92663
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 475200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.67587,
+              48.92989
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 478800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.71525,
+              48.93315
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 482400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.75463,
+              48.9364
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 486000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.79402,
+              48.93966
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 489600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.83341,
+              48.94292
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 493200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.8728,
+              48.94617
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 496800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.91219,
+              48.94943
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 500400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.95159,
+              48.95269
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 504000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.99098,
+              48.95594
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 507600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.03039,
+              48.9592
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 511200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.06979,
+              48.96246
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 514800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.1092,
+              48.96571
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 518400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.1486,
+              48.96897
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 522000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.18802,
+              48.97223
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 525600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.22743,
+              48.97548
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 529200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.26685,
+              48.97874
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 532800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.30627,
+              48.982
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 536400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.34569,
+              48.98525
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 540000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.38511,
+              48.98851
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 543600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.42454,
+              48.99177
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 547200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.46397,
+              48.99502
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 550800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.5034,
+              48.99828
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 554400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.54284,
+              49.00154
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 558000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.58227,
+              49.00479
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 561600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.62171,
+              49.00805
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 565200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.66115,
+              49.01131
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 568800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.7006,
+              49.01456
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 572400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.74005,
+              49.01782
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 576000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.7795,
+              49.02108
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 579600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.81895,
+              49.02434
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 583200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.85841,
+              49.02759
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 586800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.89786,
+              49.03085
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 590400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.93732,
+              49.03411
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 594000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.97679,
+              49.03736
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 597600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -133.0031,
+              49.03953
             ],
             "status": "outside"
           },
           {
             "timeSeconds": 601200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -133.0031,
+              49.03953
             ],
             "status": "outside"
           },
           {
             "timeSeconds": 604800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -133.0031,
+              49.03953
             ],
             "status": "outside"
           }
@@ -4103,7 +4103,7 @@
             "timeSeconds": 7200,
             "coordinates": [
               -125.99211,
-              48.99995
+              48.99997
             ],
             "status": "floating"
           },
@@ -4111,7 +4111,7 @@
             "timeSeconds": 10800,
             "coordinates": [
               -125.98817,
-              48.99988
+              48.99993
             ],
             "status": "floating"
           },
@@ -4119,7 +4119,7 @@
             "timeSeconds": 14400,
             "coordinates": [
               -125.98423,
-              48.99979
+              48.99987
             ],
             "status": "floating"
           },
@@ -4127,7 +4127,7 @@
             "timeSeconds": 18000,
             "coordinates": [
               -125.98029,
-              48.99966
+              48.99979
             ],
             "status": "floating"
           },
@@ -4135,1303 +4135,1303 @@
             "timeSeconds": 21600,
             "coordinates": [
               -125.97635,
-              48.99951
+              48.9997
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 25200,
             "coordinates": [
-              -125.97242,
-              48.99933
+              -125.97241,
+              48.99958
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 28800,
             "coordinates": [
-              -125.96849,
-              48.99912
+              -125.96847,
+              48.99946
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 32400,
             "coordinates": [
-              -125.96456,
-              48.99889
+              -125.96453,
+              48.99931
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 36000,
             "coordinates": [
-              -125.96064,
-              48.99863
+              -125.96059,
+              48.99915
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 39600,
             "coordinates": [
-              -125.95672,
-              48.99833
+              -125.95666,
+              48.99897
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 43200,
             "coordinates": [
-              -125.9528,
-              48.99802
+              -125.95273,
+              48.99877
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 46800,
             "coordinates": [
-              -125.94889,
-              48.99767
+              -125.9488,
+              48.99855
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 50400,
             "coordinates": [
-              -125.94499,
-              48.9973
+              -125.94487,
+              48.99832
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 54000,
             "coordinates": [
-              -125.94109,
-              48.99689
+              -125.94094,
+              48.99807
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 57600,
             "coordinates": [
-              -125.9372,
-              48.99646
+              -125.93702,
+              48.9978
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 61200,
             "coordinates": [
-              -125.93332,
-              48.99601
+              -125.9331,
+              48.99752
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 64800,
             "coordinates": [
-              -125.92945,
-              48.99552
+              -125.92918,
+              48.99722
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 68400,
             "coordinates": [
-              -125.92558,
-              48.99501
+              -125.92527,
+              48.9969
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 72000,
             "coordinates": [
-              -125.92172,
-              48.99447
+              -125.92136,
+              48.99656
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 75600,
             "coordinates": [
-              -125.91787,
-              48.99391
+              -125.91745,
+              48.99621
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 79200,
             "coordinates": [
-              -125.91403,
-              48.99331
+              -125.91355,
+              48.99584
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 82800,
             "coordinates": [
-              -125.9102,
-              48.9927
+              -125.90965,
+              48.99545
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 86400,
             "coordinates": [
-              -125.90637,
-              48.99205
+              -125.90575,
+              48.99505
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 90000,
             "coordinates": [
-              -125.90256,
-              48.99138
+              -125.90186,
+              48.99462
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 93600,
             "coordinates": [
-              -125.89876,
-              48.99068
+              -125.89797,
+              48.99419
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 97200,
             "coordinates": [
-              -125.89497,
-              48.98996
+              -125.89409,
+              48.99373
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 100800,
             "coordinates": [
-              -125.8912,
-              48.98921
+              -125.89021,
+              48.99326
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 104400,
             "coordinates": [
-              -125.88743,
-              48.98844
+              -125.88634,
+              48.99278
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 108000,
             "coordinates": [
-              -125.88368,
-              48.98764
+              -125.88247,
+              48.99227
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 111600,
             "coordinates": [
-              -125.87994,
-              48.98682
+              -125.87861,
+              48.99175
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 115200,
             "coordinates": [
-              -125.87621,
-              48.98597
+              -125.87475,
+              48.99122
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 118800,
             "coordinates": [
-              -125.8725,
-              48.9851
+              -125.8709,
+              48.99066
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 122400,
             "coordinates": [
-              -125.8688,
-              48.9842
+              -125.86705,
+              48.99009
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 126000,
             "coordinates": [
-              -125.86512,
-              48.98327
+              -125.86321,
+              48.98951
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 129600,
             "coordinates": [
-              -125.86145,
-              48.98232
+              -125.85937,
+              48.98891
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 133200,
             "coordinates": [
-              -125.85779,
-              48.98135
+              -125.85554,
+              48.98829
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 136800,
             "coordinates": [
-              -125.85415,
-              48.98035
+              -125.85172,
+              48.98765
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 140400,
             "coordinates": [
-              -125.85053,
-              48.97933
+              -125.84791,
+              48.987
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 144000,
             "coordinates": [
-              -125.84692,
-              48.97828
+              -125.84409,
+              48.98633
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 147600,
             "coordinates": [
-              -125.84333,
-              48.97721
+              -125.84029,
+              48.98565
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 151200,
             "coordinates": [
-              -125.83976,
-              48.97612
+              -125.83649,
+              48.98495
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 154800,
             "coordinates": [
-              -125.8362,
-              48.975
+              -125.83271,
+              48.98423
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 158400,
             "coordinates": [
-              -125.83266,
-              48.97386
+              -125.82892,
+              48.9835
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 162000,
             "coordinates": [
-              -125.82914,
-              48.97269
+              -125.82515,
+              48.98275
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 165600,
             "coordinates": [
-              -125.82564,
-              48.9715
+              -125.82138,
+              48.98199
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 169200,
             "coordinates": [
-              -125.82216,
-              48.97029
+              -125.81762,
+              48.98121
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 172800,
             "coordinates": [
-              -125.81869,
-              48.96906
+              -125.81387,
+              48.98042
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 176400,
             "coordinates": [
-              -125.81525,
-              48.96781
+              -125.81012,
+              48.97961
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 180000,
             "coordinates": [
-              -125.81182,
-              48.96653
+              -125.80639,
+              48.97878
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 183600,
             "coordinates": [
-              -125.80841,
-              48.96523
+              -125.80266,
+              48.97794
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 187200,
             "coordinates": [
-              -125.80503,
-              48.96391
+              -125.79894,
+              48.97708
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 190800,
             "coordinates": [
-              -125.80166,
-              48.96257
+              -125.79523,
+              48.97621
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 194400,
             "coordinates": [
-              -125.79832,
-              48.9612
+              -125.79153,
+              48.97532
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 198000,
             "coordinates": [
-              -125.795,
-              48.95982
+              -125.78783,
+              48.97442
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 201600,
             "coordinates": [
-              -125.79169,
-              48.95841
+              -125.78415,
+              48.9735
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 205200,
             "coordinates": [
-              -125.78841,
-              48.95699
+              -125.78047,
+              48.97257
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 208800,
             "coordinates": [
-              -125.78516,
-              48.95554
+              -125.7768,
+              48.97162
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 212400,
             "coordinates": [
-              -125.78192,
-              48.95407
+              -125.77315,
+              48.97065
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 216000,
             "coordinates": [
-              -125.77871,
-              48.95258
+              -125.7695,
+              48.96968
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 219600,
             "coordinates": [
-              -125.77552,
-              48.95107
+              -125.76586,
+              48.96868
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 223200,
             "coordinates": [
-              -125.77235,
-              48.94954
+              -125.76223,
+              48.96767
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 226800,
             "coordinates": [
-              -125.76921,
-              48.94799
+              -125.75861,
+              48.96665
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 230400,
             "coordinates": [
-              -125.76609,
-              48.94642
+              -125.75501,
+              48.96561
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 234000,
             "coordinates": [
-              -125.76299,
-              48.94483
+              -125.75141,
+              48.96456
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 237600,
             "coordinates": [
-              -125.75992,
-              48.94322
+              -125.74782,
+              48.96349
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 241200,
             "coordinates": [
-              -125.75687,
-              48.94159
+              -125.74424,
+              48.9624
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 244800,
             "coordinates": [
-              -125.75385,
-              48.93994
+              -125.74068,
+              48.96131
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 248400,
             "coordinates": [
-              -125.75085,
-              48.93827
+              -125.73712,
+              48.96019
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 252000,
             "coordinates": [
-              -125.74788,
-              48.93658
+              -125.73357,
+              48.95907
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 255600,
             "coordinates": [
-              -125.74494,
-              48.93488
+              -125.73004,
+              48.95793
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 259200,
             "coordinates": [
-              -125.74202,
-              48.93316
+              -125.72652,
+              48.95677
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 262800,
             "coordinates": [
-              -125.73912,
-              48.93142
+              -125.723,
+              48.9556
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 266400,
             "coordinates": [
-              -125.73626,
-              48.92966
+              -125.7195,
+              48.95442
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 270000,
             "coordinates": [
-              -125.73342,
-              48.92788
+              -125.71601,
+              48.95322
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 273600,
             "coordinates": [
-              -125.7306,
-              48.92609
+              -125.71254,
+              48.95201
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 277200,
             "coordinates": [
-              -125.72781,
-              48.92428
+              -125.70907,
+              48.95079
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 280800,
             "coordinates": [
-              -125.72506,
-              48.92245
+              -125.70562,
+              48.94955
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 284400,
             "coordinates": [
-              -125.72232,
-              48.92061
+              -125.70217,
+              48.94829
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 288000,
             "coordinates": [
-              -125.71962,
-              48.91875
+              -125.69874,
+              48.94703
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 291600,
             "coordinates": [
-              -125.71694,
-              48.91688
+              -125.69532,
+              48.94575
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 295200,
             "coordinates": [
-              -125.71429,
-              48.91499
+              -125.69192,
+              48.94445
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 298800,
             "coordinates": [
-              -125.71167,
-              48.91308
+              -125.68853,
+              48.94315
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 302400,
             "coordinates": [
-              -125.70908,
-              48.91116
+              -125.68515,
+              48.94182
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 306000,
             "coordinates": [
-              -125.70651,
-              48.90922
+              -125.68178,
+              48.94049
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 309600,
             "coordinates": [
-              -125.70397,
-              48.90727
+              -125.67842,
+              48.93914
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 313200,
             "coordinates": [
-              -125.70146,
-              48.9053
+              -125.67508,
+              48.93778
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 316800,
             "coordinates": [
-              -125.69898,
-              48.90332
+              -125.67175,
+              48.9364
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 320400,
             "coordinates": [
-              -125.69653,
-              48.90132
+              -125.66844,
+              48.93501
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 324000,
             "coordinates": [
-              -125.6941,
-              48.89931
+              -125.66513,
+              48.93361
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 327600,
             "coordinates": [
-              -125.69171,
-              48.89729
+              -125.66184,
+              48.9322
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 331200,
             "coordinates": [
-              -125.68934,
-              48.89525
+              -125.65857,
+              48.93077
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 334800,
             "coordinates": [
-              -125.687,
-              48.8932
+              -125.65531,
+              48.92933
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 338400,
             "coordinates": [
-              -125.6847,
-              48.89113
+              -125.65206,
+              48.92788
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 342000,
             "coordinates": [
-              -125.68242,
-              48.88905
+              -125.64882,
+              48.92641
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 345600,
             "coordinates": [
-              -125.68017,
-              48.88696
+              -125.6456,
+              48.92493
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 349200,
             "coordinates": [
-              -125.67795,
-              48.88486
+              -125.6424,
+              48.92344
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 352800,
             "coordinates": [
-              -125.67576,
-              48.88274
+              -125.6392,
+              48.92194
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 356400,
             "coordinates": [
-              -125.6736,
-              48.88061
+              -125.63603,
+              48.92042
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 360000,
             "coordinates": [
-              -125.67148,
-              48.87847
+              -125.63286,
+              48.91889
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 363600,
             "coordinates": [
-              -125.66938,
-              48.87632
+              -125.62971,
+              48.91735
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 367200,
             "coordinates": [
-              -125.66731,
-              48.87415
+              -125.62658,
+              48.9158
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 370800,
             "coordinates": [
-              -125.66528,
-              48.87198
+              -125.62346,
+              48.91423
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 374400,
             "coordinates": [
-              -125.66328,
-              48.86979
+              -125.62035,
+              48.91266
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 378000,
             "coordinates": [
-              -125.6613,
-              48.86759
+              -125.61726,
+              48.91107
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 381600,
             "coordinates": [
-              -125.65936,
-              48.86538
+              -125.61419,
+              48.90947
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 385200,
             "coordinates": [
-              -125.65745,
-              48.86316
+              -125.61112,
+              48.90786
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 388800,
             "coordinates": [
-              -125.65557,
-              48.86093
+              -125.60808,
+              48.90623
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 392400,
             "coordinates": [
-              -125.65373,
-              48.85869
+              -125.60505,
+              48.9046
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 396000,
             "coordinates": [
-              -125.65191,
-              48.85644
+              -125.60203,
+              48.90295
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 399600,
             "coordinates": [
-              -125.65013,
-              48.85418
+              -125.59903,
+              48.90129
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 403200,
             "coordinates": [
-              -125.64838,
-              48.85192
+              -125.59604,
+              48.89962
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 406800,
             "coordinates": [
-              -125.64667,
-              48.84964
+              -125.59307,
+              48.89794
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 410400,
             "coordinates": [
-              -125.64498,
-              48.84735
+              -125.59012,
+              48.89624
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 414000,
             "coordinates": [
-              -125.64333,
-              48.84506
+              -125.58718,
+              48.89454
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 417600,
             "coordinates": [
-              -125.64171,
-              48.84275
+              -125.58425,
+              48.89282
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 421200,
             "coordinates": [
-              -125.64012,
-              48.84044
+              -125.58135,
+              48.8911
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 424800,
             "coordinates": [
-              -125.63857,
-              48.83812
+              -125.57845,
+              48.88936
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 428400,
             "coordinates": [
-              -125.63705,
-              48.83579
+              -125.57558,
+              48.88761
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 432000,
             "coordinates": [
-              -125.63556,
-              48.83346
+              -125.57272,
+              48.88585
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 435600,
             "coordinates": [
-              -125.6341,
-              48.83111
+              -125.56987,
+              48.88408
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 439200,
             "coordinates": [
-              -125.63268,
-              48.82876
+              -125.56705,
+              48.8823
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 442800,
             "coordinates": [
-              -125.63129,
-              48.8264
+              -125.56424,
+              48.88051
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 446400,
             "coordinates": [
-              -125.62993,
-              48.82404
+              -125.56144,
+              48.87871
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 450000,
             "coordinates": [
-              -125.6286,
-              48.82167
+              -125.55866,
+              48.8769
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 453600,
             "coordinates": [
-              -125.6273,
-              48.81929
+              -125.5559,
+              48.87508
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 457200,
             "coordinates": [
-              -125.62604,
-              48.81691
+              -125.55316,
+              48.87325
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 460800,
             "coordinates": [
-              -125.62481,
-              48.81452
+              -125.55043,
+              48.87141
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 464400,
             "coordinates": [
-              -125.62361,
-              48.81213
+              -125.54772,
+              48.86956
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 468000,
             "coordinates": [
-              -125.62244,
-              48.80973
+              -125.54502,
+              48.8677
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 471600,
             "coordinates": [
-              -125.62131,
-              48.80732
+              -125.54235,
+              48.86582
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 475200,
             "coordinates": [
-              -125.6202,
-              48.80491
+              -125.53969,
+              48.86394
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 478800,
             "coordinates": [
-              -125.61913,
-              48.8025
+              -125.53704,
+              48.86205
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 482400,
             "coordinates": [
-              -125.6181,
-              48.80008
+              -125.53442,
+              48.86015
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 486000,
             "coordinates": [
-              -125.61709,
-              48.79766
+              -125.53181,
+              48.85824
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 489600,
             "coordinates": [
-              -125.61612,
-              48.79523
+              -125.52922,
+              48.85632
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 493200,
             "coordinates": [
-              -125.61518,
-              48.7928
+              -125.52664,
+              48.85439
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 496800,
             "coordinates": [
-              -125.61428,
-              48.79036
+              -125.52409,
+              48.85245
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 500400,
             "coordinates": [
-              -125.6134,
-              48.78792
+              -125.52155,
+              48.85051
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 504000,
             "coordinates": [
-              -125.61256,
-              48.78548
+              -125.51903,
+              48.84855
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 507600,
             "coordinates": [
-              -125.61176,
-              48.78303
+              -125.51653,
+              48.84658
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 511200,
             "coordinates": [
-              -125.61098,
-              48.78058
+              -125.51404,
+              48.8446
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 514800,
             "coordinates": [
-              -125.61024,
-              48.77813
+              -125.51157,
+              48.84262
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 518400,
             "coordinates": [
-              -125.60953,
-              48.77567
+              -125.50913,
+              48.84063
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 522000,
             "coordinates": [
-              -125.60886,
-              48.77322
+              -125.50669,
+              48.83862
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 525600,
             "coordinates": [
-              -125.60822,
-              48.77076
+              -125.50428,
+              48.83661
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 529200,
             "coordinates": [
-              -125.60761,
-              48.7683
+              -125.50189,
+              48.83459
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 532800,
             "coordinates": [
-              -125.60704,
-              48.76583
+              -125.49951,
+              48.83256
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 536400,
             "coordinates": [
-              -125.6065,
-              48.76337
+              -125.49715,
+              48.83052
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 540000,
             "coordinates": [
-              -125.60599,
-              48.7609
+              -125.49481,
+              48.82848
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 543600,
             "coordinates": [
-              -125.60552,
-              48.75843
+              -125.49249,
+              48.82642
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 547200,
             "coordinates": [
-              -125.60508,
-              48.75596
+              -125.49019,
+              48.82436
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 550800,
             "coordinates": [
-              -125.60467,
-              48.75349
+              -125.4879,
+              48.82229
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 554400,
             "coordinates": [
-              -125.6043,
-              48.75102
+              -125.48563,
+              48.82021
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 558000,
             "coordinates": [
-              -125.60396,
-              48.74855
+              -125.48339,
+              48.81813
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 561600,
             "coordinates": [
-              -125.60365,
-              48.74608
+              -125.48115,
+              48.81604
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 565200,
             "coordinates": [
-              -125.60338,
-              48.74361
+              -125.47894,
+              48.81393
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 568800,
             "coordinates": [
-              -125.60313,
-              48.74114
+              -125.47675,
+              48.81183
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 572400,
             "coordinates": [
-              -125.60292,
-              48.73867
+              -125.47457,
+              48.80971
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 576000,
             "coordinates": [
-              -125.60274,
-              48.7362
+              -125.47242,
+              48.80759
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 579600,
             "coordinates": [
-              -125.60259,
-              48.73373
+              -125.47028,
+              48.80546
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 583200,
             "coordinates": [
-              -125.60247,
-              48.73126
+              -125.46816,
+              48.80332
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 586800,
             "coordinates": [
-              -125.60239,
-              48.7288
+              -125.46606,
+              48.80117
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 590400,
             "coordinates": [
-              -125.60234,
-              48.72633
+              -125.46398,
+              48.79902
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 594000,
             "coordinates": [
-              -125.60231,
-              48.72387
+              -125.46191,
+              48.79686
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 597600,
             "coordinates": [
-              -125.60232,
-              48.72141
+              -125.45987,
+              48.79469
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 601200,
             "coordinates": [
-              -125.60236,
-              48.71895
+              -125.45784,
+              48.79252
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 604800,
             "coordinates": [
-              -125.60244,
-              48.71649
+              -125.45584,
+              48.79034
             ],
             "status": "floating"
           }
@@ -5458,7 +5458,7 @@
         "type": "foam",
         "finalStatus": "outside",
         "capturedBy": null,
-        "statusChangedAtSeconds": 367800
+        "statusChangedAtSeconds": 596400
       },
       {
         "id": "bottle-2",
@@ -9077,528 +9077,528 @@
           {
             "timeSeconds": 370800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.53495,
+              48.83544
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 374400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.57425,
+              48.8387
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 378000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.61356,
+              48.84196
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 381600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.65287,
+              48.84521
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 385200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.69219,
+              48.84847
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 388800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.7315,
+              48.85173
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 392400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.77082,
+              48.85498
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 396000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.81014,
+              48.85824
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 399600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.84947,
+              48.8615
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 403200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.88879,
+              48.86475
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 406800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.92812,
+              48.86801
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 410400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -130.96746,
+              48.87127
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 414000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.00679,
+              48.87453
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 417600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.04613,
+              48.87778
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 421200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.08547,
+              48.88104
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 424800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.12481,
+              48.8843
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 428400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.16415,
+              48.88755
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 432000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.2035,
+              48.89081
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 435600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.24285,
+              48.89407
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 439200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.2822,
+              48.89732
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 442800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.32156,
+              48.90058
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 446400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.36092,
+              48.90384
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 450000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.40028,
+              48.90709
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 453600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.43964,
+              48.91035
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 457200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.479,
+              48.91361
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 460800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.51837,
+              48.91686
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 464400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.55774,
+              48.92012
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 468000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.59711,
+              48.92338
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 471600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.63649,
+              48.92663
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 475200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.67587,
+              48.92989
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 478800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.71525,
+              48.93315
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 482400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.75463,
+              48.9364
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 486000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.79402,
+              48.93966
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 489600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.83341,
+              48.94292
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 493200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.8728,
+              48.94617
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 496800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.91219,
+              48.94943
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 500400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.95159,
+              48.95269
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 504000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -131.99098,
+              48.95594
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 507600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.03039,
+              48.9592
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 511200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.06979,
+              48.96246
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 514800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.1092,
+              48.96571
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 518400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.1486,
+              48.96897
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 522000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.18802,
+              48.97223
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 525600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.22743,
+              48.97548
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 529200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.26685,
+              48.97874
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 532800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.30627,
+              48.982
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 536400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.34569,
+              48.98525
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 540000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.38511,
+              48.98851
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 543600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.42454,
+              48.99177
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 547200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.46397,
+              48.99502
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 550800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.5034,
+              48.99828
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 554400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.54284,
+              49.00154
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 558000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.58227,
+              49.00479
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 561600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.62171,
+              49.00805
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 565200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.66115,
+              49.01131
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 568800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.7006,
+              49.01456
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 572400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.74005,
+              49.01782
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 576000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.7795,
+              49.02108
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 579600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.81895,
+              49.02434
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 583200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.85841,
+              49.02759
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 586800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.89786,
+              49.03085
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 590400,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.93732,
+              49.03411
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 594000,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -132.97679,
+              49.03736
             ],
-            "status": "outside"
+            "status": "floating"
           },
           {
             "timeSeconds": 597600,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -133.0031,
+              49.03953
             ],
             "status": "outside"
           },
           {
             "timeSeconds": 601200,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -133.0031,
+              49.03953
             ],
             "status": "outside"
           },
           {
             "timeSeconds": 604800,
             "coordinates": [
-              -130.50219,
-              48.83273
+              -133.0031,
+              49.03953
             ],
             "status": "outside"
           }
@@ -9628,7 +9628,7 @@
             "timeSeconds": 7200,
             "coordinates": [
               -125.99211,
-              48.99995
+              48.99997
             ],
             "status": "floating"
           },
@@ -9636,7 +9636,7 @@
             "timeSeconds": 10800,
             "coordinates": [
               -125.98817,
-              48.99988
+              48.99993
             ],
             "status": "floating"
           },
@@ -9644,7 +9644,7 @@
             "timeSeconds": 14400,
             "coordinates": [
               -125.98423,
-              48.99979
+              48.99987
             ],
             "status": "floating"
           },
@@ -9652,7 +9652,7 @@
             "timeSeconds": 18000,
             "coordinates": [
               -125.98029,
-              48.99966
+              48.99979
             ],
             "status": "floating"
           },
@@ -9660,1303 +9660,1303 @@
             "timeSeconds": 21600,
             "coordinates": [
               -125.97635,
-              48.99951
+              48.9997
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 25200,
             "coordinates": [
-              -125.97242,
-              48.99933
+              -125.97241,
+              48.99958
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 28800,
             "coordinates": [
-              -125.96849,
-              48.99912
+              -125.96847,
+              48.99946
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 32400,
             "coordinates": [
-              -125.96456,
-              48.99889
+              -125.96453,
+              48.99931
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 36000,
             "coordinates": [
-              -125.96064,
-              48.99863
+              -125.96059,
+              48.99915
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 39600,
             "coordinates": [
-              -125.95672,
-              48.99833
+              -125.95666,
+              48.99897
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 43200,
             "coordinates": [
-              -125.9528,
-              48.99802
+              -125.95273,
+              48.99877
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 46800,
             "coordinates": [
-              -125.94889,
-              48.99767
+              -125.9488,
+              48.99855
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 50400,
             "coordinates": [
-              -125.94499,
-              48.9973
+              -125.94487,
+              48.99832
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 54000,
             "coordinates": [
-              -125.94109,
-              48.99689
+              -125.94094,
+              48.99807
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 57600,
             "coordinates": [
-              -125.9372,
-              48.99646
+              -125.93702,
+              48.9978
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 61200,
             "coordinates": [
-              -125.93332,
-              48.99601
+              -125.9331,
+              48.99752
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 64800,
             "coordinates": [
-              -125.92945,
-              48.99552
+              -125.92918,
+              48.99722
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 68400,
             "coordinates": [
-              -125.92558,
-              48.99501
+              -125.92527,
+              48.9969
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 72000,
             "coordinates": [
-              -125.92172,
-              48.99447
+              -125.92136,
+              48.99656
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 75600,
             "coordinates": [
-              -125.91787,
-              48.99391
+              -125.91745,
+              48.99621
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 79200,
             "coordinates": [
-              -125.91403,
-              48.99331
+              -125.91355,
+              48.99584
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 82800,
             "coordinates": [
-              -125.9102,
-              48.9927
+              -125.90965,
+              48.99545
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 86400,
             "coordinates": [
-              -125.90637,
-              48.99205
+              -125.90575,
+              48.99505
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 90000,
             "coordinates": [
-              -125.90256,
-              48.99138
+              -125.90186,
+              48.99462
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 93600,
             "coordinates": [
-              -125.89876,
-              48.99068
+              -125.89797,
+              48.99419
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 97200,
             "coordinates": [
-              -125.89497,
-              48.98996
+              -125.89409,
+              48.99373
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 100800,
             "coordinates": [
-              -125.8912,
-              48.98921
+              -125.89021,
+              48.99326
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 104400,
             "coordinates": [
-              -125.88743,
-              48.98844
+              -125.88634,
+              48.99278
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 108000,
             "coordinates": [
-              -125.88368,
-              48.98764
+              -125.88247,
+              48.99227
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 111600,
             "coordinates": [
-              -125.87994,
-              48.98682
+              -125.87861,
+              48.99175
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 115200,
             "coordinates": [
-              -125.87621,
-              48.98597
+              -125.87475,
+              48.99122
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 118800,
             "coordinates": [
-              -125.8725,
-              48.9851
+              -125.8709,
+              48.99066
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 122400,
             "coordinates": [
-              -125.8688,
-              48.9842
+              -125.86705,
+              48.99009
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 126000,
             "coordinates": [
-              -125.86512,
-              48.98327
+              -125.86321,
+              48.98951
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 129600,
             "coordinates": [
-              -125.86145,
-              48.98232
+              -125.85937,
+              48.98891
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 133200,
             "coordinates": [
-              -125.85779,
-              48.98135
+              -125.85554,
+              48.98829
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 136800,
             "coordinates": [
-              -125.85415,
-              48.98035
+              -125.85172,
+              48.98765
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 140400,
             "coordinates": [
-              -125.85053,
-              48.97933
+              -125.84791,
+              48.987
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 144000,
             "coordinates": [
-              -125.84692,
-              48.97828
+              -125.84409,
+              48.98633
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 147600,
             "coordinates": [
-              -125.84333,
-              48.97721
+              -125.84029,
+              48.98565
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 151200,
             "coordinates": [
-              -125.83976,
-              48.97612
+              -125.83649,
+              48.98495
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 154800,
             "coordinates": [
-              -125.8362,
-              48.975
+              -125.83271,
+              48.98423
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 158400,
             "coordinates": [
-              -125.83266,
-              48.97386
+              -125.82892,
+              48.9835
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 162000,
             "coordinates": [
-              -125.82914,
-              48.97269
+              -125.82515,
+              48.98275
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 165600,
             "coordinates": [
-              -125.82564,
-              48.9715
+              -125.82138,
+              48.98199
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 169200,
             "coordinates": [
-              -125.82216,
-              48.97029
+              -125.81762,
+              48.98121
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 172800,
             "coordinates": [
-              -125.81869,
-              48.96906
+              -125.81387,
+              48.98042
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 176400,
             "coordinates": [
-              -125.81525,
-              48.96781
+              -125.81012,
+              48.97961
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 180000,
             "coordinates": [
-              -125.81182,
-              48.96653
+              -125.80639,
+              48.97878
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 183600,
             "coordinates": [
-              -125.80841,
-              48.96523
+              -125.80266,
+              48.97794
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 187200,
             "coordinates": [
-              -125.80503,
-              48.96391
+              -125.79894,
+              48.97708
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 190800,
             "coordinates": [
-              -125.80166,
-              48.96257
+              -125.79523,
+              48.97621
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 194400,
             "coordinates": [
-              -125.79832,
-              48.9612
+              -125.79153,
+              48.97532
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 198000,
             "coordinates": [
-              -125.795,
-              48.95982
+              -125.78783,
+              48.97442
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 201600,
             "coordinates": [
-              -125.79169,
-              48.95841
+              -125.78415,
+              48.9735
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 205200,
             "coordinates": [
-              -125.78841,
-              48.95699
+              -125.78047,
+              48.97257
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 208800,
             "coordinates": [
-              -125.78516,
-              48.95554
+              -125.7768,
+              48.97162
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 212400,
             "coordinates": [
-              -125.78192,
-              48.95407
+              -125.77315,
+              48.97065
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 216000,
             "coordinates": [
-              -125.77871,
-              48.95258
+              -125.7695,
+              48.96968
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 219600,
             "coordinates": [
-              -125.77552,
-              48.95107
+              -125.76586,
+              48.96868
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 223200,
             "coordinates": [
-              -125.77235,
-              48.94954
+              -125.76223,
+              48.96767
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 226800,
             "coordinates": [
-              -125.76921,
-              48.94799
+              -125.75861,
+              48.96665
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 230400,
             "coordinates": [
-              -125.76609,
-              48.94642
+              -125.75501,
+              48.96561
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 234000,
             "coordinates": [
-              -125.76299,
-              48.94483
+              -125.75141,
+              48.96456
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 237600,
             "coordinates": [
-              -125.75992,
-              48.94322
+              -125.74782,
+              48.96349
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 241200,
             "coordinates": [
-              -125.75687,
-              48.94159
+              -125.74424,
+              48.9624
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 244800,
             "coordinates": [
-              -125.75385,
-              48.93994
+              -125.74068,
+              48.96131
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 248400,
             "coordinates": [
-              -125.75085,
-              48.93827
+              -125.73712,
+              48.96019
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 252000,
             "coordinates": [
-              -125.74788,
-              48.93658
+              -125.73357,
+              48.95907
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 255600,
             "coordinates": [
-              -125.74494,
-              48.93488
+              -125.73004,
+              48.95793
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 259200,
             "coordinates": [
-              -125.74202,
-              48.93316
+              -125.72652,
+              48.95677
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 262800,
             "coordinates": [
-              -125.73912,
-              48.93142
+              -125.723,
+              48.9556
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 266400,
             "coordinates": [
-              -125.73626,
-              48.92966
+              -125.7195,
+              48.95442
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 270000,
             "coordinates": [
-              -125.73342,
-              48.92788
+              -125.71601,
+              48.95322
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 273600,
             "coordinates": [
-              -125.7306,
-              48.92609
+              -125.71254,
+              48.95201
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 277200,
             "coordinates": [
-              -125.72781,
-              48.92428
+              -125.70907,
+              48.95079
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 280800,
             "coordinates": [
-              -125.72506,
-              48.92245
+              -125.70562,
+              48.94955
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 284400,
             "coordinates": [
-              -125.72232,
-              48.92061
+              -125.70217,
+              48.94829
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 288000,
             "coordinates": [
-              -125.71962,
-              48.91875
+              -125.69874,
+              48.94703
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 291600,
             "coordinates": [
-              -125.71694,
-              48.91688
+              -125.69532,
+              48.94575
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 295200,
             "coordinates": [
-              -125.71429,
-              48.91499
+              -125.69192,
+              48.94445
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 298800,
             "coordinates": [
-              -125.71167,
-              48.91308
+              -125.68853,
+              48.94315
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 302400,
             "coordinates": [
-              -125.70908,
-              48.91116
+              -125.68515,
+              48.94182
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 306000,
             "coordinates": [
-              -125.70651,
-              48.90922
+              -125.68178,
+              48.94049
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 309600,
             "coordinates": [
-              -125.70397,
-              48.90727
+              -125.67842,
+              48.93914
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 313200,
             "coordinates": [
-              -125.70146,
-              48.9053
+              -125.67508,
+              48.93778
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 316800,
             "coordinates": [
-              -125.69898,
-              48.90332
+              -125.67175,
+              48.9364
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 320400,
             "coordinates": [
-              -125.69653,
-              48.90132
+              -125.66844,
+              48.93501
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 324000,
             "coordinates": [
-              -125.6941,
-              48.89931
+              -125.66513,
+              48.93361
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 327600,
             "coordinates": [
-              -125.69171,
-              48.89729
+              -125.66184,
+              48.9322
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 331200,
             "coordinates": [
-              -125.68934,
-              48.89525
+              -125.65857,
+              48.93077
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 334800,
             "coordinates": [
-              -125.687,
-              48.8932
+              -125.65531,
+              48.92933
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 338400,
             "coordinates": [
-              -125.6847,
-              48.89113
+              -125.65206,
+              48.92788
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 342000,
             "coordinates": [
-              -125.68242,
-              48.88905
+              -125.64882,
+              48.92641
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 345600,
             "coordinates": [
-              -125.68017,
-              48.88696
+              -125.6456,
+              48.92493
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 349200,
             "coordinates": [
-              -125.67795,
-              48.88486
+              -125.6424,
+              48.92344
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 352800,
             "coordinates": [
-              -125.67576,
-              48.88274
+              -125.6392,
+              48.92194
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 356400,
             "coordinates": [
-              -125.6736,
-              48.88061
+              -125.63603,
+              48.92042
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 360000,
             "coordinates": [
-              -125.67148,
-              48.87847
+              -125.63286,
+              48.91889
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 363600,
             "coordinates": [
-              -125.66938,
-              48.87632
+              -125.62971,
+              48.91735
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 367200,
             "coordinates": [
-              -125.66731,
-              48.87415
+              -125.62658,
+              48.9158
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 370800,
             "coordinates": [
-              -125.66528,
-              48.87198
+              -125.62346,
+              48.91423
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 374400,
             "coordinates": [
-              -125.66328,
-              48.86979
+              -125.62035,
+              48.91266
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 378000,
             "coordinates": [
-              -125.6613,
-              48.86759
+              -125.61726,
+              48.91107
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 381600,
             "coordinates": [
-              -125.65936,
-              48.86538
+              -125.61419,
+              48.90947
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 385200,
             "coordinates": [
-              -125.65745,
-              48.86316
+              -125.61112,
+              48.90786
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 388800,
             "coordinates": [
-              -125.65557,
-              48.86093
+              -125.60808,
+              48.90623
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 392400,
             "coordinates": [
-              -125.65373,
-              48.85869
+              -125.60505,
+              48.9046
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 396000,
             "coordinates": [
-              -125.65191,
-              48.85644
+              -125.60203,
+              48.90295
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 399600,
             "coordinates": [
-              -125.65013,
-              48.85418
+              -125.59903,
+              48.90129
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 403200,
             "coordinates": [
-              -125.64838,
-              48.85192
+              -125.59604,
+              48.89962
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 406800,
             "coordinates": [
-              -125.64667,
-              48.84964
+              -125.59307,
+              48.89794
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 410400,
             "coordinates": [
-              -125.64498,
-              48.84735
+              -125.59012,
+              48.89624
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 414000,
             "coordinates": [
-              -125.64333,
-              48.84506
+              -125.58718,
+              48.89454
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 417600,
             "coordinates": [
-              -125.64171,
-              48.84275
+              -125.58425,
+              48.89282
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 421200,
             "coordinates": [
-              -125.64012,
-              48.84044
+              -125.58135,
+              48.8911
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 424800,
             "coordinates": [
-              -125.63857,
-              48.83812
+              -125.57845,
+              48.88936
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 428400,
             "coordinates": [
-              -125.63705,
-              48.83579
+              -125.57558,
+              48.88761
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 432000,
             "coordinates": [
-              -125.63556,
-              48.83346
+              -125.57272,
+              48.88585
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 435600,
             "coordinates": [
-              -125.6341,
-              48.83111
+              -125.56987,
+              48.88408
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 439200,
             "coordinates": [
-              -125.63268,
-              48.82876
+              -125.56705,
+              48.8823
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 442800,
             "coordinates": [
-              -125.63129,
-              48.8264
+              -125.56424,
+              48.88051
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 446400,
             "coordinates": [
-              -125.62993,
-              48.82404
+              -125.56144,
+              48.87871
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 450000,
             "coordinates": [
-              -125.6286,
-              48.82167
+              -125.55866,
+              48.8769
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 453600,
             "coordinates": [
-              -125.6273,
-              48.81929
+              -125.5559,
+              48.87508
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 457200,
             "coordinates": [
-              -125.62604,
-              48.81691
+              -125.55316,
+              48.87325
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 460800,
             "coordinates": [
-              -125.62481,
-              48.81452
+              -125.55043,
+              48.87141
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 464400,
             "coordinates": [
-              -125.62361,
-              48.81213
+              -125.54772,
+              48.86956
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 468000,
             "coordinates": [
-              -125.62244,
-              48.80973
+              -125.54502,
+              48.8677
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 471600,
             "coordinates": [
-              -125.62131,
-              48.80732
+              -125.54235,
+              48.86582
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 475200,
             "coordinates": [
-              -125.6202,
-              48.80491
+              -125.53969,
+              48.86394
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 478800,
             "coordinates": [
-              -125.61913,
-              48.8025
+              -125.53704,
+              48.86205
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 482400,
             "coordinates": [
-              -125.6181,
-              48.80008
+              -125.53442,
+              48.86015
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 486000,
             "coordinates": [
-              -125.61709,
-              48.79766
+              -125.53181,
+              48.85824
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 489600,
             "coordinates": [
-              -125.61612,
-              48.79523
+              -125.52922,
+              48.85632
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 493200,
             "coordinates": [
-              -125.61518,
-              48.7928
+              -125.52664,
+              48.85439
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 496800,
             "coordinates": [
-              -125.61428,
-              48.79036
+              -125.52409,
+              48.85245
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 500400,
             "coordinates": [
-              -125.6134,
-              48.78792
+              -125.52155,
+              48.85051
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 504000,
             "coordinates": [
-              -125.61256,
-              48.78548
+              -125.51903,
+              48.84855
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 507600,
             "coordinates": [
-              -125.61176,
-              48.78303
+              -125.51653,
+              48.84658
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 511200,
             "coordinates": [
-              -125.61098,
-              48.78058
+              -125.51404,
+              48.8446
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 514800,
             "coordinates": [
-              -125.61024,
-              48.77813
+              -125.51157,
+              48.84262
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 518400,
             "coordinates": [
-              -125.60953,
-              48.77567
+              -125.50913,
+              48.84063
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 522000,
             "coordinates": [
-              -125.60886,
-              48.77322
+              -125.50669,
+              48.83862
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 525600,
             "coordinates": [
-              -125.60822,
-              48.77076
+              -125.50428,
+              48.83661
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 529200,
             "coordinates": [
-              -125.60761,
-              48.7683
+              -125.50189,
+              48.83459
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 532800,
             "coordinates": [
-              -125.60704,
-              48.76583
+              -125.49951,
+              48.83256
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 536400,
             "coordinates": [
-              -125.6065,
-              48.76337
+              -125.49715,
+              48.83052
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 540000,
             "coordinates": [
-              -125.60599,
-              48.7609
+              -125.49481,
+              48.82848
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 543600,
             "coordinates": [
-              -125.60552,
-              48.75843
+              -125.49249,
+              48.82642
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 547200,
             "coordinates": [
-              -125.60508,
-              48.75596
+              -125.49019,
+              48.82436
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 550800,
             "coordinates": [
-              -125.60467,
-              48.75349
+              -125.4879,
+              48.82229
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 554400,
             "coordinates": [
-              -125.6043,
-              48.75102
+              -125.48563,
+              48.82021
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 558000,
             "coordinates": [
-              -125.60396,
-              48.74855
+              -125.48339,
+              48.81813
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 561600,
             "coordinates": [
-              -125.60365,
-              48.74608
+              -125.48115,
+              48.81604
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 565200,
             "coordinates": [
-              -125.60338,
-              48.74361
+              -125.47894,
+              48.81393
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 568800,
             "coordinates": [
-              -125.60313,
-              48.74114
+              -125.47675,
+              48.81183
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 572400,
             "coordinates": [
-              -125.60292,
-              48.73867
+              -125.47457,
+              48.80971
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 576000,
             "coordinates": [
-              -125.60274,
-              48.7362
+              -125.47242,
+              48.80759
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 579600,
             "coordinates": [
-              -125.60259,
-              48.73373
+              -125.47028,
+              48.80546
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 583200,
             "coordinates": [
-              -125.60247,
-              48.73126
+              -125.46816,
+              48.80332
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 586800,
             "coordinates": [
-              -125.60239,
-              48.7288
+              -125.46606,
+              48.80117
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 590400,
             "coordinates": [
-              -125.60234,
-              48.72633
+              -125.46398,
+              48.79902
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 594000,
             "coordinates": [
-              -125.60231,
-              48.72387
+              -125.46191,
+              48.79686
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 597600,
             "coordinates": [
-              -125.60232,
-              48.72141
+              -125.45987,
+              48.79469
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 601200,
             "coordinates": [
-              -125.60236,
-              48.71895
+              -125.45784,
+              48.79252
             ],
             "status": "floating"
           },
           {
             "timeSeconds": 604800,
             "coordinates": [
-              -125.60244,
-              48.71649
+              -125.45584,
+              48.79034
             ],
             "status": "floating"
           }
@@ -10983,7 +10983,7 @@
         "type": "foam",
         "finalStatus": "outside",
         "capturedBy": null,
-        "statusChangedAtSeconds": 367800
+        "statusChangedAtSeconds": 596400
       },
       {
         "id": "bottle-2",

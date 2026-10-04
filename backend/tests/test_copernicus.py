@@ -165,3 +165,17 @@ def test_fallback_does_not_replace_a_real_cached_field():
     returned = snapshot._remember(KEY, synthetic_field(KEY), ttl=60)
     assert returned is real
     assert snapshot._cached(KEY) is real
+
+
+def test_fields_from_past_hours_are_dropped_from_memory():
+    # Big boxes take several MB each in memory and the key includes the hour, so old hours are never read again.
+    from datetime import timedelta
+
+    old = make_key(10.2, -20.1, 1, T0)
+    recent = make_key(10.2, -20.1, 1, T0 + timedelta(hours=2))
+    now = make_key(10.2, -20.1, 1, T0 + timedelta(hours=3))
+    for key in (old, recent, now):
+        snapshot._remember(key, synthetic_field(key))
+    assert snapshot._cached(old) is None
+    assert snapshot._cached(recent) is not None
+    assert snapshot._cached(now) is not None

@@ -298,6 +298,10 @@ def _remember(key: SnapshotKey, fld: Field, ttl: float | None = None) -> Field:
         if ttl is not None and existing is not None and existing[1] is None:
             return existing[0]  # a fallback never replaces a real field
         _cache[key] = (fld, None if ttl is None else time.monotonic() + ttl)
+        # The key includes the slice hour, so fields from past hours are never read again.
+        cutoff = key.slice_time - timedelta(hours=config.CACHE_KEEP_HOURS)
+        for old in [k for k in _cache if k.slice_time < cutoff]:
+            del _cache[old]
     return fld
 
 

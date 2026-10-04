@@ -11,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 from psycopg.types.json import Jsonb
-from psycopg_pool import ConnectionPool
+from psycopg_pool import ConnectionPool, PoolTimeout
 
 from app import config
 from app.schemas import SimulateRequest, SimulateResponse, TimelineBucket, TimelineResponse
@@ -36,17 +36,32 @@ def init_pool() -> bool:
         return False
     try:
         pool = ConnectionPool(
-            config.DATABASE_URL, min_size=1, max_size=4, open=False, timeout=5,
+            # min_size=2: a background snapshot upload (~58k rows, ~11 s) holds one connection, so keep
+            # a second one open; opening a new TLS connection during that upload measured 2 to 5+ s.
+            config.DATABASE_URL, min_size=2, max_size=4, open=False, timeout=10,
             check=ConnectionPool.check_connection,  # replace a connection Tiger dropped while idle
         )
-        pool.open(wait=True, timeout=10)
-        _pool = pool
-        _down_until = 0.0
-        return True
     except Exception:
         log.warning("Tiger Data unavailable", exc_info=True)
         _pool = None
         return False
+    try:
+        pool.open(wait=True, timeout=10)
+    except PoolTimeout:
+        # Slow to connect, not broken: the pool keeps connecting in the background. Keep it and
+        # let the cooldown retry it, instead of staying disconnected until the server restarts.
+        log.warning("Tiger Data slow to connect at startup; will retry", exc_info=True)
+        _pool = pool
+        report_failure()
+        return False
+    except Exception:
+        log.warning("Tiger Data unavailable", exc_info=True)
+        pool.close()
+        _pool = None
+        return False
+    _pool = pool
+    _down_until = 0.0
+    return True
 
 
 def close_pool() -> None:
