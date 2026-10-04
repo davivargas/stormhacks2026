@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { requestSimulation } from "./simulationApi";
+import { deleteSessionRuns, requestSimulation } from "./simulationApi";
 import { requestStoryAudio, requestStoryForRun } from "./storyApi";
 import type { Coordinates } from "./types";
 
@@ -12,7 +12,7 @@ vi.mock("./OceanMap", () => ({
     <output data-testid="frames">{JSON.stringify(frames)}</output>
   </>,
 }));
-vi.mock("./simulationApi", () => ({ requestSimulation: vi.fn() }));
+vi.mock("./simulationApi", () => ({ requestSimulation: vi.fn(), deleteSessionRuns: vi.fn() }));
 vi.mock("./storyApi", () => ({ requestStoryForRun: vi.fn(), requestStoryAudio: vi.fn() }));
 
 class FakeAudio {
@@ -58,6 +58,7 @@ beforeEach(() => {
     story_id: "story", audio_url: "http://localhost/test.mp3", content_type: "audio/mpeg",
     script: "A ten-day journey.", voice_id: "voice", model_id: "model", cached: true,
   });
+  vi.mocked(deleteSessionRuns).mockResolvedValue({ deleted: 1, database: "cleared" });
 });
 
 afterEach(() => {
@@ -66,6 +67,7 @@ afterEach(() => {
   vi.mocked(requestSimulation).mockReset();
   vi.mocked(requestStoryForRun).mockReset();
   vi.mocked(requestStoryAudio).mockReset();
+  vi.mocked(deleteSessionRuns).mockReset();
 });
 
 describe("ten-day timeline UI", () => {
@@ -110,5 +112,72 @@ describe("ten-day timeline UI", () => {
     fireEvent.click(screen.getByRole("button", { name: "Restart experiment" }));
     expect(audio.currentTime).toBe(0);
     expect(slider.value).toBe("0");
+  });
+});
+
+describe("reset all", () => {
+  const START_MESSAGE = "Choose a litter type, then click the ocean to place it.";
+  const FAILED_MESSAGE = "The map is reset, but the saved runs could not be deleted. Try Reset all again.";
+
+  async function placeBottleOnDayThree() {
+    const slider = screen.getByRole("slider") as HTMLInputElement;
+    fireEvent.click(screen.getByRole("button", { name: /Bottle/ }));
+    fireEvent.change(slider, { target: { value: "259200" } });
+    fireEvent.click(screen.getByRole("button", { name: "Drop at test ocean point" }));
+    await waitFor(() => expect(screen.getByTestId("frames").textContent).not.toBe("[]"));
+    return slider;
+  }
+
+  it("clears the map, rewinds the timer, and deletes this session's runs", async () => {
+    render(<App />);
+    const slider = await placeBottleOnDayThree();
+    expect(slider.value).toBe("259200");
+
+    fireEvent.click(screen.getByRole("button", { name: /Reset all/ }));
+
+    expect(slider.value).toBe("0");
+    expect(slider.getAttribute("aria-valuetext")).toBe("0d 00h 00m");
+    expect(screen.getByTestId("frames").textContent).toBe("[]");
+    expect(screen.getByRole("button", { name: /Bottle/ }).getAttribute("aria-pressed")).toBe("false");
+    expect(deleteSessionRuns).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getByText(START_MESSAGE)).toBeTruthy());
+    expect(requestSimulation).toHaveBeenCalledTimes(1); // an empty map asks for no new simulation
+  });
+
+  it("discards the loaded narration", async () => {
+    render(<App />);
+    await placeBottleOnDayThree();
+    fireEvent.click(screen.getByRole("button", { name: "Play simulation and narration" }));
+    await waitFor(() => expect(FakeAudio.instances).toHaveLength(1));
+    const audio = FakeAudio.instances[0];
+
+    fireEvent.click(screen.getByRole("button", { name: /Reset all/ }));
+
+    expect(audio.ontimeupdate).toBeNull();
+    expect(screen.getByRole("button", { name: "Play simulation and narration" })).toBeTruthy();
+  });
+
+  it.each([
+    ["the request fails", () => vi.mocked(deleteSessionRuns).mockRejectedValue(new Error("offline"))],
+    ["the database delete fails", () => vi.mocked(deleteSessionRuns).mockResolvedValue({ deleted: 1, database: "failed" })],
+  ])("still resets the map and says so when %s", async (_label, arrange) => {
+    arrange();
+    render(<App />);
+    const slider = await placeBottleOnDayThree();
+
+    fireEvent.click(screen.getByRole("button", { name: /Reset all/ }));
+
+    expect(slider.value).toBe("0");
+    expect(screen.getByTestId("frames").textContent).toBe("[]");
+    await waitFor(() => expect(screen.getByText(FAILED_MESSAGE)).toBeTruthy());
+  });
+
+  it("does not warn when no database is configured", async () => {
+    vi.mocked(deleteSessionRuns).mockResolvedValue({ deleted: 1, database: "unavailable" });
+    render(<App />);
+    await placeBottleOnDayThree();
+    fireEvent.click(screen.getByRole("button", { name: /Reset all/ }));
+    await waitFor(() => expect(screen.getByText(START_MESSAGE)).toBeTruthy());
+    expect(screen.queryByText(FAILED_MESSAGE)).toBeNull();
   });
 });

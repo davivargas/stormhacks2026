@@ -12,10 +12,11 @@ import {
   Play,
   RotateCcw,
   Sparkles,
+  Trash2,
   Waves,
 } from "lucide-react";
 import { OceanMap } from "./OceanMap";
-import { requestSimulation } from "./simulationApi";
+import { deleteSessionRuns, requestSimulation } from "./simulationApi";
 import type { SimulateResponse } from "./simulationApi";
 import { requestStoryAudio, requestStoryForRun } from "./storyApi";
 import {
@@ -40,6 +41,8 @@ const tools: Array<{ id: Tool; label: string; detail: string; icon: typeof CupSo
   { id: "collector", label: "Cleanup", detail: "Catch litter", icon: Anchor },
   { id: "remove", label: "Remove", detail: "Pick an item", icon: Eraser },
 ];
+
+const START_MESSAGE = "Choose a litter type, then click the ocean to place it.";
 
 const goalListVariants = {
   hidden: {},
@@ -98,7 +101,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationRun, setSimulationRun] = useState<SimulateResponse | null>(null);
   const [simulationError, setSimulationError] = useState<string | null>(null);
-  const [message, setMessage] = useState("Choose a litter type, then click the ocean to place it.");
+  const [message, setMessage] = useState(START_MESSAGE);
   const lastFrameRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const narrationSignatureRef = useRef<string | null>(null);
@@ -371,7 +374,26 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     setTimeSeconds(0);
     setMessage(placements.some(({ type }) => type !== "collector")
       ? "Restarted the backend simulation playback."
-      : "Choose a litter type, then click the ocean to place it.");
+      : START_MESSAGE);
+  };
+
+  const resetAll = () => {
+    stopPlayback();
+    detachAudio(audioRef.current);
+    audioRef.current = null;
+    setPlacements([]);
+    setSelectedParticleId(null);
+    setTool("explore");
+    setTimeSeconds(0);
+    setNarrationLines([]);
+    setNarrationLineIndex(0);
+    setMessage(START_MESSAGE);
+    const warn = () => setMessage("The map is reset, but the saved runs could not be deleted. Try Reset all again.");
+    deleteSessionRuns()
+      .then(({ database }) => {
+        if (database === "failed") warn();
+      })
+      .catch(warn);
   };
 
   return (
@@ -422,6 +444,19 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
                 {tool === id && <motion.span className="tool-selection-dot" layoutId="tool-selection" />}
               </motion.button>
             ))}
+            <motion.button
+              className="tool-button tool-button--reset"
+              type="button"
+              onClick={resetAll}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.28 + tools.length * 0.06, type: "spring", stiffness: 420, damping: 26 }}
+              whileHover={{ x: 5, scale: 1.015 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span className="tool-icon tool-icon--reset"><Trash2 size={24} /></span>
+              <span><strong>Reset all</strong><small>Clear the map</small></span>
+            </motion.button>
           </div>
           <div className="current-key"><span>↗</span><p><strong>Ocean current</strong>Arrows show water direction</p></div>
         </motion.aside>
