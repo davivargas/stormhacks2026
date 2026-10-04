@@ -70,7 +70,7 @@ half_width_deg = min(8.0, round_up_to_half_degree(1.0 + 0.4 * duration_days))
 | 7 days | 4.0 degrees | 96 x 96 | 300 KB |
 | 18 days or more | 8.0 degrees (cap) | 192 x 192 | 1.2 MB |
 
-Rounding to half degrees keeps the number of distinct cache keys small. Beyond the cap a fast current can leave the box; that item becomes `exited`, which is a legitimate result. Cache key is (centre_lon, centre_lat, half_width_deg, slice_time, n_slices).
+Rounding to half degrees keeps the number of distinct cache keys small. Beyond the cap a fast current can leave the box; that item becomes `outside`, which is a legitimate result. Cache key is (centre_lon, centre_lat, half_width_deg, slice_time, n_slices).
 
 **Where snapshots live.** In Tiger Data (see section 7), plus an in-process dictionary for the current server lifetime. The engine loads a snapshot with one SELECT into NumPy arrays. There is no disk cache. If the database is unreachable the in-process cache still works and the response is marked `persisted: false`.
 
@@ -78,7 +78,7 @@ Each item in a run gets its own snapshot, because items may be dropped oceans ap
 
 ## 5. Simulation engine
 
-**Inputs.** A list of items (id, litter_type, lon, lat), an optional list of collection points (id, lon, lat, radius_m), duration_days, and the snapshot for each item. One duration applies to the whole run: every item starts at hour zero and the timeline ends at `duration_days * 24` hours for all of them.
+**Inputs.** The frontend's placement list exactly as it holds it (id, type, coordinates as [lon, lat]) where type is bottle, bag, foam, or collector; a collector radius; duration_days; and the snapshot for each litter item. One duration applies to the whole run: every item starts at hour zero and the timeline ends at `duration_days * 24` hours for all of them.
 
 **Integration.** Forward Euler in lon/lat degrees.
 
@@ -107,9 +107,9 @@ RK2 midpoint is a two-line upgrade if trails look jagged. Not in the MVP.
 | floating | initial | no |
 | beached | nearest grid cell is land | yes |
 | captured | distance to any collection point <= radius (haversine) | yes |
-| exited | position leaves the item's snapshot box | yes |
+| outside | position leaves the item's snapshot box | yes |
 
-Captured records which collection point. Checks run every integration step in the order beached, captured, exited.
+The four names match the frontend's `ParticleStatus` type in `src/types.ts`. Captured records which collector. Checks run every integration step in the order beached, captured, outside.
 
 **Determinism.** No randomness anywhere. Same items plus same snapshots give the same frames. The before/after comparison therefore uses identical environmental inputs by construction.
 
@@ -117,44 +117,59 @@ Captured records which collection point. Checks run every integration step in th
 
 ## 6. API
 
-All JSON, served by FastAPI under `/api`. CORS open for the frontend origin.
+All JSON, served by FastAPI under `/api`. CORS open for the frontend origin. JSON keys are camelCase to match the frontend's TypeScript types (Pydantic alias generator); SQL stays snake_case.
 
 | Method and path | Purpose | Consumer |
 |---|---|---|
 | GET /api/health | liveness, db reachable flag | ops |
 | GET /api/meta | min, max and default duration_days, other defaults, attribution text, limitations text, litter types | Person 2 |
-| GET /api/currents?lon&lat&duration_days | fetch or reuse the snapshot for that point and return downsampled arrows `[{lon, lat, u, v}]` plus snapshot metadata | Person 1 map overlay |
-| POST /api/simulate | run one experiment, store it, return frames and summary | Person 1, Person 2 |
-| POST /api/compare | run the same items twice, without and with collection points, same snapshots; return both run ids, both summaries, and the delta | Person 4 (Gemini input), Person 2 (comparison card) |
-| GET /api/runs/{run_id} | replay a stored run: same shape as simulate response | Person 4, reload |
-| GET /api/runs/{run_id}/timeline | status counts per hour from a `time_bucket` query | Person 2 chart, Tiger track demo |
+| GET /api/currents?lon&lat&durationDays | fetch or reuse the snapshot for that point and return downsampled arrows `[{coordinates, u, v, speed, bearing}]` plus snapshot metadata. `bearing` is degrees clockwise from north, which is what `currentGeoJson` already draws | Person 1 map overlay |
+| POST /api/simulate | run one experiment, store it, return `trajectories` and summary | Person 1, Person 2 |
+| POST /api/compare | run the same placements twice, once ignoring collectors and once honouring them, same snapshots; return `{without, with, delta}` where `without` and `with` are full simulate responses. The keys match the frontend's `ComparisonMode` | Person 4 (Gemini input), Person 2 (comparison card) |
+| GET /api/runs/{runId} | replay a stored run: same shape as simulate response | Person 4, reload |
+| GET /api/runs/{runId}/timeline | status counts per hour from a `time_bucket` query | Person 2 chart, Tiger track demo |
 
-**POST /api/simulate request**
+**POST /api/simulate request.** The `placements` array is the frontend's `Placement[]` unchanged.
 
 ```json
 {
-  "items": [{"id": "a1", "litter_type": "bottle", "lon": -125.3, "lat": 48.9}],
-  "collection_points": [{"id": "c1", "lon": -125.0, "lat": 48.8, "radius_m": 10000}],
-  "duration_days": 7
+  "placements": [
+    {"id": "bottle-1", "type": "bottle", "coordinates": [-125.3, 48.9]},
+    {"id": "collector-1", "type": "collector", "coordinates": [-125.0, 48.8]}
+  ],
+  "durationDays": 7,
+  "collectorRadiusM": 10000
 }
 ```
 
-**POST /api/simulate response**
+**POST /api/simulate response.** The `trajectories` array is the frontend's `ParticleTrajectory[]` unchanged.
 
 ```json
 {
-  "run_id": "uuid",
-  "duration_days": 7,
-  "total_hours": 168,
-  "frame_interval_minutes": 60,
-  "frames": [
-    {"t_hours": 0, "positions": [{"id": "a1", "lon": -125.3, "lat": 48.9, "status": "floating"}]},
-    {"t_hours": 1, "positions": ["..."]}
+  "runId": "uuid",
+  "durationDays": 7,
+  "totalSeconds": 604800,
+  "sampleIntervalSeconds": 3600,
+  "trajectories": [
+    {
+      "id": "bottle-1",
+      "type": "bottle",
+      "samples": [
+        {"timeSeconds": 0, "coordinates": [-125.3, 48.9], "status": "floating"},
+        {"timeSeconds": 3600, "coordinates": [-125.29, 48.9], "status": "floating"}
+      ]
+    }
   ],
-  "items": [{"id": "a1", "litter_type": "bottle", "final_status": "captured", "captured_by": "c1", "status_changed_at_hours": 37}],
-  "collection_points": [{"id": "c1", "captured_count": 1}],
-  "summary": {"floating": 0, "captured": 1, "beached": 0, "exited": 0},
-  "snapshots": [{"snapshot_id": "uuid", "source": "copernicus", "slice_time": "2026-10-03T18:00:00Z", "n_slices": 1}],
+  "items": [
+    {"id": "bottle-1", "type": "bottle", "finalStatus": "captured", "capturedBy": "collector-1", "statusChangedAtSeconds": 133200}
+  ],
+  "collectors": [
+    {"id": "collector-1", "coordinates": [-125.0, 48.8], "radiusM": 10000, "capturedCount": 1}
+  ],
+  "summary": {"floating": 0, "captured": 1, "beached": 0, "outside": 0},
+  "snapshots": [
+    {"snapshotId": "uuid", "source": "copernicus", "sliceTime": "2026-10-03T18:00:00Z", "nSlices": 1}
+  ],
   "attribution": {
     "source": "Copernicus Marine Service, Global Ocean Physics Analysis and Forecast",
     "dataset": "cmems_mod_glo_phy_anfc_merged-uv_PT1H-i",
@@ -164,9 +179,11 @@ All JSON, served by FastAPI under `/api`. CORS open for the frontend origin.
 }
 ```
 
-Payload size: 20 items for 7 days at hourly frames is about 3 400 positions, a few hundred KB uncompressed. Fine.
+**Error shape.** `{"code": "on_land", "message": "That spot is land. Try the water!", "placementId": "bottle-1"}` with HTTP 422.
 
-**Frontend contract notes.** Frames are hourly; the frontend interpolates linearly between frames for smooth scrubbing. Positions of terminal items repeat their final position in later frames so the frontend needs no special casing.
+Payload size: 20 items for 30 days at hourly samples is about 14 400 samples, roughly 1 MB uncompressed and far less gzipped. Fine.
+
+**Frontend contract notes.** Samples are hourly; the frontend's existing `interpolateFrame` already interpolates between samples, so scrubbing is smooth at any resolution. Terminal items repeat their final position in later samples so trails and counts need no special casing. `timeSeconds` is elapsed time from the run start, matching the frontend's timeline scale.
 
 ## 7. Tiger Data schema
 
@@ -211,7 +228,7 @@ CREATE TABLE run_items (
   snapshot_id UUID NOT NULL,
   final_status TEXT NOT NULL,
   captured_by TEXT,
-  status_changed_at_hours INT,
+  status_changed_at_seconds INT,
   PRIMARY KEY (run_id, item_id)
 );
 
@@ -224,7 +241,7 @@ CREATE TABLE run_collection_points (
 
 -- one row per item per recorded frame
 CREATE TABLE positions (
-  time    TIMESTAMPTZ NOT NULL,              -- run created_at + t_hours
+  time    TIMESTAMPTZ NOT NULL,              -- run created_at + timeSeconds
   run_id  UUID NOT NULL,
   item_id TEXT NOT NULL,
   lon DOUBLE PRECISION NOT NULL, lat DOUBLE PRECISION NOT NULL,
@@ -244,6 +261,8 @@ CREATE INDEX ON positions (run_id, time);
 **Sizing.** Free plan is 750 MiB per service. Snapshots dominate: about 2 MB per 192 x 192 snapshot as rows before compression. Hundreds of runs fit comfortably for the weekend.
 
 ## 8. Repository layout
+
+The repo root is the Vite frontend (`src/`, `package.json`). The backend lives in `backend/` at the root with its own env file and dependencies, so neither side's tooling touches the other.
 
 ```
 backend/
@@ -275,8 +294,8 @@ backend/
 |---|---|
 | Copernicus fetch fails or exceeds 20 s | synthetic field, `source: "synthetic"`, HTTP 200 |
 | Drop point on land | HTTP 422, `code: "on_land"` |
-| duration_days not an integer in 1 to 30 | HTTP 422 |
-| More than 50 items | HTTP 422 |
+| durationDays not an integer in 1 to 30 | HTTP 422 |
+| More than 50 litter placements | HTTP 422 |
 | Database unreachable | simulation still runs from in-process cache, `persisted: false`; `/runs/{id}` returns 503 |
 | Unknown run id | HTTP 404 |
 
@@ -285,7 +304,7 @@ backend/
 Three engine tests on synthetic fields, no network, no database.
 
 1. Uniform eastward field at 0.5 m/s for 24 h moves an item about 43 km east and leaves it floating.
-2. A field pointing at a land cell beaches the item, and later frames repeat the beached position.
+2. A field pointing at a land cell beaches the item, and later samples repeat the beached position.
 3. An item passing within 10 km of a collection point is captured once, credited to that point, and the summary counts match.
 
 One snapshot test: the synthetic field builder returns arrays of the right shape with NaN land where requested.
@@ -296,7 +315,7 @@ Fetching from Copernicus and writing to Tiger are verified by hand with a smoke 
 
 | Phase | Hours | Deliverable | Unblocks |
 |---|---|---|---|
-| 0 | 0 to 1 | `schemas.py` plus `fixtures/simulate_response.json` committed; API table shared with the team | Persons 1, 2, 4 start immediately |
+| 0 | 0 to 1 | `schemas.py` plus `fixtures/simulate_response.json` committed, with `trajectories` in the exact `ParticleTrajectory` shape; API table shared with the team | Persons 1, 2, 4 start immediately |
 | 1 | 1 to 4 | synthetic field, `Field.sample`, engine, status machine, three tests green, `/simulate` serving synthetic data | Person 1 integrates for real |
 | 2 | 4 to 7 | Copernicus account, `fetch_copernicus`, `/currents` arrows, land validation | real data on the map |
 | 3 | 7 to 11 | Tiger service, schema, snapshot cache in db, `save_run`, `/runs/{id}`, `/timeline`, `/compare` | Person 4 has comparison objects, Tiger track story |
@@ -304,7 +323,7 @@ Fetching from Copernicus and writing to Tiger are verified by hand with a smoke 
 
 ## 12. Interfaces with the other streams
 
-- **Person 1 (map).** Needs `/currents` for arrows and the frames shape. Interpolates between hourly frames. Draws trail from past frames.
+- **Person 1 (map).** Replaces `buildTrajectories()` in `src/simulation.ts` with a call to `POST /api/simulate` and uses the response's `trajectories` directly; `interpolateFrame`, `trailGeoJson` and `particleGeoJson` work unchanged. Reads `totalSeconds` from the response instead of the fixed `DURATION_SECONDS` constant. Uses `bearing` from `/currents` in `currentGeoJson`. Drops the Vancouver `REGION_BOUNDS` and `PLAYABLE_WATER` gating once the backend's `on_land` error is wired, because the map is global.
 - **Person 2 (UI).** Needs `summary`, `items`, `attribution` and `/meta` for the parent panel, and the 422 `on_land` message.
 - **Person 4 (AI).** Needs the `/compare` response as the structured input to Gemini: both summaries, the delta, per item final statuses and timings, and the attribution block so explanations cite the source.
 
