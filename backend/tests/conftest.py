@@ -17,5 +17,6 @@ def isolated(monkeypatch):
         raise RuntimeError("network disabled in tests")
 
     monkeypatch.setattr(snapshot, "fetch_copernicus", refuse)
+    monkeypatch.setattr(snapshot, "_copernicus_down_until", 0.0)
     snapshot._cache.clear()
     routes._runs.clear()

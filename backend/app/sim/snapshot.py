@@ -9,6 +9,7 @@ import concurrent.futures
 import logging
 import math
 import threading
+import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -205,33 +206,122 @@ def synthetic_field(
     return Field(key=key, source="synthetic", lon=lon, lat=lat, times=np.array([0.0]), components=components)
 
 
+_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
+
+# The dataset calls Stokes drift vsdx / vsdy; the rest of the code uses ustokes / vstokes.
+_DATASET_NAMES = {"ustokes": "vsdx", "vstokes": "vsdy"}
+_DATASET_VARIABLES = [_DATASET_NAMES.get(name, name) for name in COMPONENTS]
+
+
+def fetch_bounds(key: SnapshotKey) -> tuple[float, float, float, float]:
+    """(west, south, east, north) to request, cut at the edge of the map.
+
+    A box that crosses the antimeridian is fetched only up to +/-180; an item that
+    reaches the cut becomes outside. Synthetic boxes are not cut.
+    """
+    hw = key.half_width_deg
+    return (
+        max(-180.0, key.centre_lon - hw),
+        max(-90.0, key.centre_lat - hw),
+        min(180.0, key.centre_lon + hw),
+        min(90.0, key.centre_lat + hw),
+    )
+
+
+def field_from_dataset(ds, key: SnapshotKey) -> Field:
+    """Turn an xarray Dataset covering the box into a single-slice Field."""
+    if "depth" in ds.dims:
+        ds = ds.isel(depth=0)
+    target = np.datetime64(key.slice_time.astimezone(UTC).replace(tzinfo=None))
+    ds = ds.sel(time=target, method="nearest").load()
+    lon = ds["longitude"].values.astype("float64")
+    lat = ds["latitude"].values.astype("float64")
+    if lon.size < 2 or lat.size < 2:
+        raise ValueError(f"Copernicus returned no usable grid for {key}")
+    layers = {
+        name: ds[_DATASET_NAMES.get(name, name)].transpose("latitude", "longitude").values.astype(np.float32)
+        for name in COMPONENTS
+    }
+    if lat[0] > lat[-1]:
+        lat = lat[::-1].copy()
+        layers = {name: values[::-1, :] for name, values in layers.items()}
+    components = {name: np.ascontiguousarray(values)[None] for name, values in layers.items()}
+    return Field(key=key, source="copernicus", lon=lon, lat=lat, times=np.array([0.0]), components=components)
+
+
 def fetch_copernicus(key: SnapshotKey) -> Field:
-    """Phase 2: fetch uo/vo/utide/vtide/ustokes/vstokes for the box via copernicusmarine."""
-    raise NotImplementedError("Copernicus fetch lands in phase 2")
+    """Download one box of hourly surface currents. Credentials come from the environment."""
+    import copernicusmarine  # lazy: slow import, and tests substitute it
+
+    west, south, east, north = fetch_bounds(key)
+    ds = copernicusmarine.open_dataset(
+        dataset_id=config.COPERNICUS_DATASET_ID,
+        variables=_DATASET_VARIABLES,
+        minimum_longitude=west,
+        maximum_longitude=east,
+        minimum_latitude=south,
+        maximum_latitude=north,
+        start_datetime=(key.slice_time - timedelta(hours=1)).strftime(_TIME_FORMAT),
+        end_datetime=(key.slice_time + timedelta(hours=1)).strftime(_TIME_FORMAT),
+    )
+    return field_from_dataset(ds, key)
 
 
 # ---- in-process cache -------------------------------------------------------
 
-_cache: dict[SnapshotKey, Field] = {}
+# key -> (field, expiry). expiry is None for real snapshots, a time.monotonic() deadline for fallbacks.
+_cache: dict[SnapshotKey, tuple[Field, float | None]] = {}
+# Until this time.monotonic() deadline, Copernicus is skipped: one failure covers every box.
+_copernicus_down_until: float = 0.0
 _lock = threading.Lock()
 _pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
 
-def load_field(key: SnapshotKey) -> Field:
-    """Cached field for the key; Copernicus with a timeout, synthetic gyre as fallback."""
+def _cached(key: SnapshotKey) -> Field | None:
     with _lock:
-        cached = _cache.get(key)
-    if cached is not None:
-        return cached
+        entry = _cache.get(key)
+    if entry is None:
+        return None
+    fld, expires = entry
+    if expires is not None and time.monotonic() >= expires:
+        return None
+    return fld
 
+
+def _remember(key: SnapshotKey, fld: Field, ttl: float | None = None) -> Field:
+    with _lock:
+        _cache[key] = (fld, None if ttl is None else time.monotonic() + ttl)
+    return fld
+
+
+def _fetch_with_timeout(key: SnapshotKey) -> Field | None:
+    """Copernicus within the time budget. Network, auth, timeout or empty box: None.
+
+    After a failure Copernicus is skipped for SYNTHETIC_RETRY_S, so a request with
+    many boxes pays for one failed fetch, not one per box.
+    """
+    global _copernicus_down_until
+    if time.monotonic() < _copernicus_down_until:
+        return None
     future = _pool.submit(fetch_copernicus, key)
     try:
-        result = future.result(timeout=config.COPERNICUS_TIMEOUT_S)
-    except NotImplementedError:
-        result = synthetic_field(key)
-    except Exception:  # network, auth, timeout: the demo never dies on a fetch
+        return future.result(timeout=config.COPERNICUS_TIMEOUT_S)
+    except Exception:
         log.warning("copernicus fetch failed for %s, using synthetic field", key, exc_info=True)
-        result = synthetic_field(key)
+        _copernicus_down_until = time.monotonic() + config.SYNTHETIC_RETRY_S
+        return None
 
-    with _lock:
-        return _cache.setdefault(key, result)
+
+def load_field(key: SnapshotKey) -> Field:
+    """Cached field for the key: Copernicus, or a synthetic gyre if that fails.
+
+    A fallback is reused for SYNTHETIC_RETRY_S so one request sees one field per box,
+    then the real source is tried again.
+    """
+    cached = _cached(key)
+    if cached is not None:
+        return cached
+    fld = _fetch_with_timeout(key)
+    if fld is None:
+        return _remember(key, synthetic_field(key), ttl=config.SYNTHETIC_RETRY_S)
+    return _remember(key, fld)
