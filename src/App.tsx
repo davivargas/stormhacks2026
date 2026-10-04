@@ -105,7 +105,7 @@ function App() {
 INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   );
   const [tool, setTool] = useState<Tool>("explore");
-  const [comparison, setComparison] = useState<ComparisonMode>("with");
+  const [comparison] = useState<ComparisonMode>("with");
   const [timeSeconds, setTimeSeconds] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isNarrating, setIsNarrating] = useState(false);
@@ -428,10 +428,12 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
                 }}
               />
             </div>
+            {/* Comparison control temporarily hidden while the single cleanup mode is refined.
             <div className="comparison-control" role="group" aria-label="Compare cleanup results">
               <motion.button className={comparison === "without" ? "active" : ""} type="button" onClick={() => setComparison("without")} whileTap={{ scale: 0.96 }}>Without</motion.button>
               <motion.button className={comparison === "with" ? "active" : ""} type="button" onClick={() => setComparison("with")} whileTap={{ scale: 0.96 }}>With cleanup</motion.button>
             </div>
+            */}
           </div>
         </motion.section>
 
