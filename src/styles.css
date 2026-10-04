@@ -416,7 +416,7 @@ input:focus-visible {
 }
 
 .panel-heading h1 {
-  margin: 1px 0 13px;
+  margin: 1px 0 9px;
   font-family: "Baloo 2", sans-serif;
   font-size: 1.35rem;
   line-height: 1.15;
@@ -432,8 +432,8 @@ input:focus-visible {
   align-items: center;
   gap: 9px;
   width: 100%;
-  min-height: 42px;
-  padding: 3px 9px;
+  min-height: 38px;
+  padding: 2px 9px;
   border: 2px solid transparent;
   border-radius: 17px;
   background: transparent;
@@ -471,9 +471,9 @@ input:focus-visible {
 
 .tool-icon {
   display: grid;
-  flex: 0 0 35px;
-  width: 35px;
-  height: 35px;
+  flex: 0 0 31px;
+  width: 31px;
+  height: 31px;
   place-items: center;
   border-radius: 13px;
   color: #173b50;
