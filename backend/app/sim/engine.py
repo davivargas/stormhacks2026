@@ -56,14 +56,18 @@ def _nearest_collector(lon: float, lat: float, collectors: Sequence[Collector]) 
 
 
 def _check(lon: float, lat: float, t: float, fld: Field, collectors: Sequence[Collector]) -> tuple[str, str | None]:
-    """Status checks in spec order: beached, captured, outside."""
+    """Status checks in spec order: outside, beached, captured.
+
+    Outside is first: a position beyond the snapshot box has no current data, so it
+    must never be credited to a collector or reported as beached.
+    """
+    if not fld.contains(lon, lat):
+        return "outside", None
     if fld.is_land(lon, lat, t):
         return "beached", None
     cp = _nearest_collector(lon, lat, collectors)
     if cp is not None:
         return "captured", cp
-    if not fld.contains(lon, lat):
-        return "outside", None
     return "floating", None
 
 

@@ -51,6 +51,20 @@ def test_item_drifts_across_the_antimeridian_without_jumping():
     assert out.samples[-1][1] == pytest.approx(180.338, abs=0.01)  # continuous, not wrapped to -179.66
 
 
+def test_item_leaving_the_box_is_outside_even_within_a_collector_radius():
+    fld = synthetic_field(make_key(LON, LAT, 1, T0), uniform=(2.0, 0.0))
+    # Box east edge is LON + 1.5. With the 10-minute step the item is last inside the box at
+    # about LON + 1.4916 and first outside at about LON + 1.5057. A 500 m collector (~0.006 deg)
+    # centred there covers only the outside position, never the last inside one.
+    collector = engine.Collector("c1", LON + 1.506, LAT, 500)
+    item = engine.LitterItem("b", "bottle", LON, LAT)
+    result = engine.run([item], [collector], 1, {"b": fld})
+    out = result.outcomes[0]
+    assert out.final_status == "outside"
+    assert out.captured_by is None
+    assert result.captured_counts == {"c1": 0}
+
+
 @pytest.mark.parametrize("body", [
     {"placements": [bottle("a"), bottle("a")]},                                  # duplicate ids
     {"placements": [bottle("a", (0, 91))]},                                       # latitude out of range
