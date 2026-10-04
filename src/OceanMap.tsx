@@ -20,8 +20,10 @@ interface OceanMapProps {
   frames: ParticleFrame[];
   trajectories: ParticleTrajectory[];
   timeSeconds: number;
+  selectedParticleId: string | null;
   onPlace: (coordinates: [number, number]) => void;
   onRemove: (id: string) => void;
+  onSelect: (id: string) => void;
   onInvalidPlacement: () => void;
 }
 
@@ -44,7 +46,52 @@ function collectionAreasGeoJson(placements: Placement[]) {
   );
 }
 
-function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames: ParticleFrame[], trajectories: ParticleTrajectory[], timeSeconds: number) {
+function syncParticleMarkers(
+  map: mapboxgl.Map,
+  markers: Map<string, mapboxgl.Marker>,
+  frames: ParticleFrame[],
+  selectedParticleId: string | null,
+  onSelect: (id: string) => void,
+) {
+  const visibleFrames = frames.filter(({ status }) => status !== "outside");
+  const visibleIds = new Set(visibleFrames.map(({ id }) => id));
+
+  markers.forEach((marker, id) => {
+    if (visibleIds.has(id)) return;
+    marker.remove();
+    markers.delete(id);
+  });
+
+  visibleFrames.forEach((frame) => {
+    let marker = markers.get(frame.id);
+    if (!marker) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "particle-hit-target";
+      button.setAttribute("aria-label", `Select ${frame.type} journey`);
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        onSelect(frame.id);
+      });
+      marker = new mapboxgl.Marker({ element: button, anchor: "center" })
+        .setLngLat(frame.coordinates)
+        .addTo(map);
+      markers.set(frame.id, marker);
+    }
+    marker.setLngLat(frame.coordinates);
+    marker.getElement().classList.toggle("particle-hit-target--selected", frame.id === selectedParticleId);
+    marker.getElement().setAttribute("aria-pressed", String(frame.id === selectedParticleId));
+  });
+}
+
+function addSimulationLayers(
+  map: mapboxgl.Map,
+  placements: Placement[],
+  frames: ParticleFrame[],
+  trajectories: ParticleTrajectory[],
+  timeSeconds: number,
+  selectedParticleId: string | null,
+) {
   registerMapSprites(map);
 
   const sources: Array<[string, GeoJSON.GeoJSON]> = [
@@ -126,12 +173,30 @@ function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames:
   }
   if (!map.getLayer("particles-layer")) {
     map.addLayer({
+      id: "selected-particle-halo",
+      type: "circle",
+      source: "particles",
+      filter: ["==", ["get", "id"], selectedParticleId ?? ""],
+      paint: {
+        "circle-radius": 19,
+        "circle-color": "#ffd45a",
+        "circle-opacity": 0.62,
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 4,
+      },
+    });
+    map.addLayer({
       id: "particles-layer",
       type: "symbol",
       source: "particles",
       layout: {
         "icon-image": ["get", "type"],
-        "icon-size": 0.62,
+        "icon-size": [
+          "case",
+          ["==", ["get", "id"], selectedParticleId ?? ""],
+          0.88,
+          0.62,
+        ],
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
       },
@@ -148,34 +213,40 @@ export function OceanMap({
   frames,
   trajectories,
   timeSeconds,
+  selectedParticleId,
   onPlace,
   onRemove,
+  onSelect,
   onInvalidPlacement,
 }: OceanMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const particleMarkersRef = useRef(new Map<string, mapboxgl.Marker>());
   const [mapError, setMapError] = useState(false);
   const toolRef = useRef(tool);
   const onPlaceRef = useRef(onPlace);
   const onRemoveRef = useRef(onRemove);
+  const onSelectRef = useRef(onSelect);
   const onInvalidPlacementRef = useRef(onInvalidPlacement);
-  const mapDataRef = useRef({ placements, frames, trajectories, timeSeconds });
+  const mapDataRef = useRef({ placements, frames, trajectories, timeSeconds, selectedParticleId });
 
-  mapDataRef.current = { placements, frames, trajectories, timeSeconds };
+  mapDataRef.current = { placements, frames, trajectories, timeSeconds, selectedParticleId };
 
   useEffect(() => {
     toolRef.current = tool;
     onPlaceRef.current = onPlace;
     onRemoveRef.current = onRemove;
+    onSelectRef.current = onSelect;
     onInvalidPlacementRef.current = onInvalidPlacement;
     if (mapRef.current) {
       mapRef.current.getCanvas().style.cursor = tool === "explore" ? "grab" : "crosshair";
     }
-  }, [tool, onPlace, onRemove, onInvalidPlacement]);
+  }, [tool, onPlace, onRemove, onSelect, onInvalidPlacement]);
 
   useEffect(() => {
     if (!token || !containerRef.current) return;
 
+    const particleMarkers = particleMarkersRef.current;
     mapboxgl.accessToken = token;
     const map = new mapboxgl.Map({
       container: containerRef.current,
@@ -201,12 +272,37 @@ export function OceanMap({
       mapRef.current = null;
       setMapError(true);
     };
+    const handleParticleClick = (event: MapMouseEvent) => {
+      if (toolRef.current !== "explore") return;
+      const id = event.features?.[0]?.properties?.id;
+      if (typeof id === "string") onSelectRef.current(id);
+    };
     const handleStyleLoad = () => {
       const data = mapDataRef.current;
-      addSimulationLayers(map, data.placements, data.frames, data.trajectories, data.timeSeconds);
+      addSimulationLayers(map, data.placements, data.frames, data.trajectories, data.timeSeconds, data.selectedParticleId);
+      syncParticleMarkers(
+        map,
+        particleMarkers,
+        data.frames,
+        data.selectedParticleId,
+        (id) => onSelectRef.current(id),
+      );
+      map.on("click", "particles-layer", handleParticleClick);
     };
     const handleClick = (event: MapMouseEvent) => {
       const activeTool = toolRef.current;
+      const hitBox: [[number, number], [number, number]] = [
+        [event.point.x - 18, event.point.y - 18],
+        [event.point.x + 18, event.point.y + 18],
+      ];
+      const particle = map.queryRenderedFeatures(hitBox, { layers: ["particles-layer"] })[0];
+      const particleId = particle?.properties?.id;
+
+      if (typeof particleId === "string" && activeTool !== "remove") {
+        onSelectRef.current(particleId);
+        return;
+      }
+
       if (activeTool === "explore") return;
 
       if (activeTool === "remove") {
@@ -229,6 +325,8 @@ export function OceanMap({
     map.on("click", handleClick);
 
     return () => {
+      particleMarkers.forEach((marker) => marker.remove());
+      particleMarkers.clear();
       map.remove();
       mapRef.current = null;
     };
@@ -245,7 +343,25 @@ export function OceanMap({
       ["collection-areas", collectionAreasGeoJson(placements)],
     ];
     updates.forEach(([id, data]) => (map.getSource(id) as GeoJSONSource | undefined)?.setData(data));
-  }, [frames, placements, timeSeconds, trajectories]);
+    if (map.getLayer("selected-particle-halo")) {
+      map.setFilter("selected-particle-halo", ["==", ["get", "id"], selectedParticleId ?? ""]);
+    }
+    if (map.getLayer("particles-layer")) {
+      map.setLayoutProperty("particles-layer", "icon-size", [
+        "case",
+        ["==", ["get", "id"], selectedParticleId ?? ""],
+        0.88,
+        0.62,
+      ]);
+    }
+    syncParticleMarkers(
+      map,
+      particleMarkersRef.current,
+      frames,
+      selectedParticleId,
+      (id) => onSelectRef.current(id),
+    );
+  }, [frames, placements, selectedParticleId, timeSeconds, trajectories]);
 
   if (!token || mapError) {
     return (

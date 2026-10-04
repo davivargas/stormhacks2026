@@ -79,17 +79,24 @@ class StoryService:
             }
         )
 
+    def _can_reuse_story(self, cached: StoryResponse | None) -> bool:
+        if cached is None:
+            return False
+        return not (
+            cached.generation_mode == "fallback" and self.story_generator is not None
+        )
+
     async def create_story(self, payload: SimulationSummary) -> StoryResponse:
         summary = self.simulation_adapter.normalize(payload)
         cache_key = self._story_cache_key(summary)
         cached = await asyncio.to_thread(self.cache.get_story_by_key, cache_key)
-        if cached is not None:
+        if self._can_reuse_story(cached):
             return cached
 
         lock = self._story_locks.setdefault(cache_key, asyncio.Lock())
         async with lock:
             cached = await asyncio.to_thread(self.cache.get_story_by_key, cache_key)
-            if cached is not None:
+            if self._can_reuse_story(cached):
                 return cached
 
             passages = await self.retriever.retrieve(summary)

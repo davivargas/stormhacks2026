@@ -121,6 +121,10 @@ class TiDBEducationalRetriever:
             raise RetrievalUnavailableError(
                 "TIDB_DATABASE_URL is required when RETRIEVAL_MODE=tidb"
             )
+        if settings.tidb_ssl_ca is None:
+            raise RetrievalUnavailableError(
+                "TIDB_SSL_CA is required when RETRIEVAL_MODE=tidb"
+            )
         self.embedder = embedder
         self.model = settings.embedding_model
         self.dimensions = settings.embedding_dimensions
@@ -133,6 +137,9 @@ class TiDBEducationalRetriever:
                 "connect_timeout": min(10, int(settings.provider_timeout_seconds)),
                 "read_timeout": int(settings.provider_timeout_seconds),
                 "write_timeout": int(settings.provider_timeout_seconds),
+                "ssl_ca": str(settings.tidb_ssl_ca),
+                "ssl_verify_cert": True,
+                "ssl_verify_identity": True,
             },
         )
 

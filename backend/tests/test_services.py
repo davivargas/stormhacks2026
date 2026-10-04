@@ -35,11 +35,11 @@ class CountingGenerator:
         return StoryDraft(
             title="Bottle Buddy's Current Ride",
             script=(
-                "In this simulation, Bottle Buddy begins as a playful plastic bottle at hour "
-                "zero. Ocean currents carry the character along the modelled path. At hour six, "
-                "the bottle becomes beached, matching the supplied result. The journey lasts "
-                "twenty-four hours. Wind and waves are excluded. Help protect the ocean by putting "
-                "litter in the right bin."
+                "On Finn's map, Bottle Buddy begins a possible journey at hour zero. Ocean "
+                "currents twirl the playful bottle along its watery path. By hour six, Bottle "
+                "Buddy reaches the shore and rests on the beach. Wind and waves stay out of this "
+                "adventure. Help protect real ocean travelers by putting litter safely in the "
+                "right bin."
             ),
         )
 
@@ -115,6 +115,22 @@ async def test_provider_failure_returns_deterministic_fallback(tmp_path: Path) -
     assert response.generation_mode == "fallback"
     assert response.simulation_id == BEACHED_ITEM.simulation_id
     assert "beached" in response.script.lower()
+
+
+async def test_cached_fallback_does_not_block_later_live_generation(tmp_path: Path) -> None:
+    failing_generator = CountingGenerator(should_fail=True)
+    service = make_service(tmp_path, generator=failing_generator)
+    fallback = await service.create_story(BEACHED_ITEM)
+    assert fallback.generation_mode == "fallback"
+
+    recovered_generator = CountingGenerator()
+    service.story_generator = recovered_generator
+    live = await service.create_story(BEACHED_ITEM)
+
+    assert recovered_generator.calls == 1
+    assert live.generation_mode == "live"
+    assert live.story_id != fallback.story_id
+    assert service.cache.get_story_by_key(service._story_cache_key(BEACHED_ITEM)) == live
 
 
 async def test_audio_failure_preserves_saved_story(tmp_path: Path) -> None:

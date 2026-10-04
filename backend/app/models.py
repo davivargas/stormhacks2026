@@ -86,8 +86,19 @@ class StoryDraft(BaseModel):
         count = story_word_count(value)
         if count < 50 or count > 80:
             raise ValueError(f"story must contain 50 to 80 words; received {count}")
-        if "simulation" not in value.lower():
-            raise ValueError("story must clearly say it is a simulation")
+        disclosure_phrases = (
+            "possible journey",
+            "possible path",
+            "finn's map",
+            "finn’s map",
+            "ocean map",
+            "imagined journey",
+            "modelled journey",
+            "simulated journey",
+            "simulation",
+        )
+        if not any(phrase in value.lower() for phrase in disclosure_phrases):
+            raise ValueError("story must identify the journey as a map-based possibility")
         return value
 
 
