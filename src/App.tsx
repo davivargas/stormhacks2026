@@ -55,6 +55,20 @@ function splitNarrationLines(script: string) {
   return script.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g)?.map((line) => line.trim()).filter(Boolean) ?? [script];
 }
 
+function getNarrationLineIndex(lines: string[], progress: number) {
+  if (lines.length <= 1) return 0;
+  const weights = lines.map((line) => Math.max(1, line.split(/\s+/).filter(Boolean).length));
+  const totalWeight = weights.reduce((total, weight) => total + weight, 0);
+  let accumulatedWeight = 0;
+
+  for (let index = 0; index < weights.length; index += 1) {
+    accumulatedWeight += weights[index];
+    if (progress < accumulatedWeight / totalWeight) return index;
+  }
+
+  return lines.length - 1;
+}
+
 function buildStorySummary(
   trajectories: ParticleTrajectory[],
   comparison: ComparisonMode,
@@ -269,13 +283,12 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     try {
       const story = await requestOceanStory(storySummary);
       if (playbackRequestRef.current !== requestId) return;
-      const lines = splitNarrationLines(story.script);
-      setNarrationLines(lines);
-      setNarrationLineIndex(0);
-      setMessage(lines[0] ?? story.script);
-
       const narration = await requestStoryAudio(story.story_id);
       if (playbackRequestRef.current !== requestId) return;
+      const lines = splitNarrationLines(narration.script);
+      setNarrationLines(lines);
+      setNarrationLineIndex(0);
+      setMessage(lines[0] ?? narration.script);
 
       detachAudio(audioRef.current);
       const audio = new Audio(narration.audio_url);
@@ -297,8 +310,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       };
       audio.ontimeupdate = () => {
         if (Number.isFinite(audio.duration) && audio.duration > 0) {
-          const lineCount = narrationLines.length || splitNarrationLines(story.script).length;
-          setNarrationLineIndex(Math.min(lineCount - 1, Math.floor((audio.currentTime / audio.duration) * lineCount)));
+          setNarrationLineIndex(getNarrationLineIndex(lines, audio.currentTime / audio.duration));
           setTimeSeconds((audio.currentTime / audio.duration) * DURATION_SECONDS);
         }
       };
