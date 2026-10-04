@@ -769,6 +769,11 @@ input:focus-visible {
   box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
 }
 
+.ocean-page--dark .icon-button,
+.ocean-page--dark .reset-button {
+  color: #173b50;
+}
+
 .ocean-page--dark .topbar,
 .ocean-page--dark .tool-panel,
 .ocean-page--dark .guide-bubble,
