@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import re
 from collections.abc import Sequence
@@ -15,6 +16,20 @@ from .config import Settings
 from .education import EDUCATIONAL_PASSAGES, PASSAGES_BY_ID, EducationalPassage
 from .models import SimulationSummary
 from .retry import retry_async
+
+
+ACTION_TAGS = frozenset(
+    {
+        "action",
+        "prevention",
+        "cleanup",
+        "disposal",
+        "reduce",
+        "reuse",
+        "recycle",
+        "monitoring",
+    }
+)
 
 
 class RetrievalUnavailableError(RuntimeError):
@@ -49,6 +64,127 @@ def summary_search_text(summary: SimulationSummary) -> str:
     )
 
 
+def _is_action_passage(passage: EducationalPassage) -> bool:
+    return bool(ACTION_TAGS.intersection(passage.tags))
+
+
+def _item_relevance(passage: EducationalPassage, summary: SimulationSummary) -> int:
+    item_tokens = set(
+        re.findall(r"[a-z]+", summary.litter_type.replace("_", " ").lower())
+    )
+    searchable = f"{passage.title} {' '.join(passage.tags)} {passage.passage}".lower()
+    return sum(token in searchable for token in item_tokens)
+
+
+def _is_compatible(passage: EducationalPassage, summary: SimulationSummary) -> bool:
+    assumptions = " ".join(summary.assumptions).lower()
+    excludes_breakdown = (
+        ("break down" in assumptions or "breakdown" in assumptions)
+        and any(
+            negation in assumptions
+            for negation in ("does not", "do not", "no ", "excluded")
+        )
+    )
+    if "breakdown" in passage.tags and excludes_breakdown:
+        return False
+    if "wind" in passage.tags and any(
+        phrase in assumptions for phrase in ("no wind", "wind excluded", "wind is excluded")
+    ):
+        return False
+    if {"tide", "tides"}.intersection(passage.tags) and "no tide" in assumptions:
+        return False
+    return True
+
+
+def _stable_pick(
+    passages: Sequence[EducationalPassage], summary: SimulationSummary, salt: str
+) -> EducationalPassage | None:
+    if not passages:
+        return None
+    key = f"{summary.simulation_id}:{summary.particle_id}:{salt}".encode()
+    index = int.from_bytes(hashlib.sha256(key).digest()[:4], "big") % len(passages)
+    return passages[index]
+
+
+def select_balanced_passages(
+    ranked: Sequence[EducationalPassage], summary: SimulationSummary, limit: int
+) -> list[EducationalPassage]:
+    """Keep vector relevance while ensuring stories get both explanation and action."""
+
+    if limit <= 0:
+        return []
+
+    unique: list[EducationalPassage] = []
+    seen_ids: set[str] = set()
+    for passage in ranked:
+        if passage.document_id not in seen_ids:
+            seen_ids.add(passage.document_id)
+            unique.append(passage)
+    selected: list[EducationalPassage] = []
+
+    outcome_tags = {
+        "floating": {"floating", "movement", "travel", "gyres"},
+        "beached": {"beached", "shore", "coast"},
+        "captured": {"captured", "cleanup", "removal"},
+        "outside_domain": {"simulation", "model", "assumptions"},
+        "missing_data": {"simulation", "model", "assumptions"},
+    }[summary.final_status.value]
+    journey_candidates = [
+        passage
+        for passage in unique
+        if not _is_action_passage(passage) and _is_compatible(passage, summary)
+    ]
+    outcome_candidates = [
+        passage for passage in journey_candidates if outcome_tags.intersection(passage.tags)
+    ]
+    journey = _stable_pick(
+        (outcome_candidates or journey_candidates)[:4], summary, "journey"
+    )
+    if journey is not None:
+        selected.append(journey)
+
+    if limit >= 3:
+        context_candidates = [
+            passage
+            for passage in journey_candidates
+            if passage.document_id not in {chosen.document_id for chosen in selected}
+        ]
+        if context_candidates:
+            best_context_score = max(
+                _item_relevance(passage, summary) for passage in context_candidates
+            )
+            best_context = [
+                passage
+                for passage in context_candidates
+                if _item_relevance(passage, summary) == best_context_score
+            ]
+            context = _stable_pick(best_context[:4], summary, "context")
+            if context is not None:
+                selected.append(context)
+
+    if limit >= 2:
+        action_candidates = [passage for passage in unique if _is_action_passage(passage)]
+        if action_candidates:
+            best_action_score = max(
+                _item_relevance(passage, summary) for passage in action_candidates
+            )
+            best_actions = [
+                passage
+                for passage in action_candidates
+                if _item_relevance(passage, summary) == best_action_score
+            ]
+            action = _stable_pick(best_actions[:4], summary, "action")
+            if action is not None:
+                selected.append(action)
+
+    for passage in unique:
+        if len(selected) >= limit:
+            break
+        if passage.document_id not in {chosen.document_id for chosen in selected}:
+            selected.append(passage)
+    return selected[:limit]
+
+
 class LocalEducationalRetriever:
     """Development-only lexical retrieval. This is deliberately not labelled as TiDB."""
 
@@ -66,7 +202,8 @@ class LocalEducationalRetriever:
             weighted += sum(1 for token in query_tokens if token in body)
             return (-weighted, passage.document_id)
 
-        return sorted(EDUCATIONAL_PASSAGES, key=score)[:limit]
+        ranked = sorted(EDUCATIONAL_PASSAGES, key=score)
+        return select_balanced_passages(ranked, summary, limit)
 
 
 class GeminiEmbeddingClient:
@@ -200,7 +337,9 @@ class TiDBEducationalRetriever:
     ) -> list[EducationalPassage]:
         try:
             embedding = await self.embedder.embed(summary_search_text(summary), "query")
-            return await asyncio.to_thread(self._search, embedding, limit)
+            candidate_limit = max(limit * 8, 24)
+            ranked = await asyncio.to_thread(self._search, embedding, candidate_limit)
+            return select_balanced_passages(ranked, summary, limit)
         except RetrievalUnavailableError:
             raise
         except Exception as error:

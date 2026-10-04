@@ -89,8 +89,8 @@ class Settings(BaseSettings):
     )
 
     retrieval_mode: Literal["local", "tidb"] = "local"
-    story_prompt_version: str = "2026-10-04-v4"
-    retrieval_version: str = "ocean-education-v1"
+    story_prompt_version: str = "2026-10-04-v10-varied-stories"
+    retrieval_version: str = "ocean-education-v3-expanded"
 
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.8-flash"
