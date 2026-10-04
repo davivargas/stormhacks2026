@@ -29,6 +29,75 @@ button {
   color: inherit;
 }
 
+button:disabled,
+input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.simulation-feedback {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.simulation-feedback > span,
+.simulation-feedback > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.simulation-feedback button,
+.dialog-close {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #dcf4ec;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.sources-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 24px;
+  overflow: auto;
+  border: 2px solid #cbdcde;
+  border-radius: 24px;
+  color: #173b50;
+  background: #fff;
+  box-shadow: 0 12px 48px rgba(23, 59, 80, 0.25);
+}
+
+.sources-dialog::backdrop {
+  background: rgba(23, 59, 80, 0.35);
+}
+
+.sources-dialog h2 {
+  margin-top: 0;
+  font-family: "Baloo 2", sans-serif;
+}
+
+.sources-dialog li {
+  margin-bottom: 8px;
+}
+
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
@@ -577,7 +646,9 @@ input:focus-visible {
   }
 
   .source-button {
-    display: none;
+    top: 82px;
+    bottom: auto;
+    left: 12px;
   }
 
   .credential-card {

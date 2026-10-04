@@ -6,7 +6,7 @@ dist
 *.local
 *.log
 backend/.env
-
+/.venv
 # python backend
 backend/.venv/
 __pycache__/

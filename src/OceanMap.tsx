@@ -8,7 +8,7 @@ import {
   particleGeoJson,
   trailGeoJson,
 } from "./simulation";
-import type { ParticleFrame, ParticleTrajectory, Placement, Tool } from "./types";
+import type { ParticleFrame, ParticleTrajectory, Placement, SimulationResponse, Tool } from "./types";
 
 interface OceanMapProps {
   tool: Tool;
@@ -16,6 +16,8 @@ interface OceanMapProps {
   frames: ParticleFrame[];
   trajectories: ParticleTrajectory[];
   timeSeconds: number;
+  collectorRadiusM: number;
+  collectors?: SimulationResponse["collectors"];
   onPlace: (coordinates: [number, number]) => void;
   onRemove: (id: string) => void;
   onInvalidPlacement: () => void;
@@ -59,15 +61,15 @@ function collectorsGeoJson(placements: Placement[], timeSeconds: number) {
   );
 }
 
-function collectionAreasGeoJson(placements: Placement[], timeSeconds: number) {
+function collectionAreasGeoJson(placements: Placement[], timeSeconds: number, collectorRadiusM: number, collectors?: SimulationResponse["collectors"]) {
   return featureCollection(
     placements
       .filter((item) => item.type === "collector" && item.placedAtSeconds <= timeSeconds)
-      .map((item) => circle(item.coordinates, 7, { units: "kilometers", steps: 48 })),
+      .map((item) => circle(item.coordinates, collectors?.find((collector) => collector.id === item.id)?.radiusM ?? collectorRadiusM, { units: "meters", steps: 48 })),
   );
 }
 
-function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames: ParticleFrame[], trajectories: ParticleTrajectory[], timeSeconds: number) {
+function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames: ParticleFrame[], trajectories: ParticleTrajectory[], timeSeconds: number, collectorRadiusM: number, collectors?: SimulationResponse["collectors"]) {
   registerMapSprites(map);
 
   if (!map.getSource("placement-streets")) {
@@ -81,7 +83,7 @@ function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames:
     ["trails", trailGeoJson(trajectories, timeSeconds)],
     ["particles", particleGeoJson(frames)],
     ["collectors", collectorsGeoJson(placements, timeSeconds)],
-    ["collection-areas", collectionAreasGeoJson(placements, timeSeconds)],
+    ["collection-areas", collectionAreasGeoJson(placements, timeSeconds, collectorRadiusM, collectors)],
   ];
 
   sources.forEach(([id, data]) => {
@@ -165,6 +167,8 @@ export function OceanMap({
   frames,
   trajectories,
   timeSeconds,
+  collectorRadiusM,
+  collectors,
   onPlace,
   onRemove,
   onInvalidPlacement,
@@ -176,9 +180,9 @@ export function OceanMap({
   const onPlaceRef = useRef(onPlace);
   const onRemoveRef = useRef(onRemove);
   const onInvalidPlacementRef = useRef(onInvalidPlacement);
-  const mapDataRef = useRef({ placements, frames, trajectories, timeSeconds });
+  const mapDataRef = useRef({ placements, frames, trajectories, timeSeconds, collectorRadiusM, collectors });
 
-  mapDataRef.current = { placements, frames, trajectories, timeSeconds };
+  mapDataRef.current = { placements, frames, trajectories, timeSeconds, collectorRadiusM, collectors };
 
   useEffect(() => {
     toolRef.current = tool;
@@ -224,7 +228,7 @@ export function OceanMap({
       map.setProjection("mercator");
       map.setTerrain(null);
       hideBasemapRoads(map);
-      addSimulationLayers(map, data.placements, data.frames, data.trajectories, data.timeSeconds);
+      addSimulationLayers(map, data.placements, data.frames, data.trajectories, data.timeSeconds, data.collectorRadiusM, data.collectors);
     };
     const isValidOceanPoint = (event: MapMouseEvent) => {
       if (!map.getLayer("placement-water-hit-area")) return false;
@@ -294,10 +298,10 @@ export function OceanMap({
       ["trails", trailGeoJson(trajectories, timeSeconds)],
       ["particles", particleGeoJson(frames)],
       ["collectors", collectorsGeoJson(placements, timeSeconds)],
-      ["collection-areas", collectionAreasGeoJson(placements, timeSeconds)],
+      ["collection-areas", collectionAreasGeoJson(placements, timeSeconds, collectorRadiusM, collectors)],
     ];
     updates.forEach(([id, data]) => (map.getSource(id) as GeoJSONSource | undefined)?.setData(data));
-  }, [frames, placements, timeSeconds, trajectories]);
+  }, [frames, placements, timeSeconds, trajectories, collectorRadiusM, collectors]);
 
   if (!token || mapError) {
     return (

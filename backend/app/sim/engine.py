@@ -19,6 +19,7 @@ class LitterItem:
     type: str
     lon: float
     lat: float
+    placed_at_seconds: int = 0
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,7 @@ class Collector:
     lon: float
     lat: float
     radius_m: float
+    placed_at_seconds: int = 0
 
 
 @dataclass
@@ -46,9 +48,11 @@ class RunResult:
     summary: dict[str, int] = field(default_factory=dict)
 
 
-def _nearest_collector(lon: float, lat: float, collectors: Sequence[Collector]) -> str | None:
+def _nearest_collector(lon: float, lat: float, collectors: Sequence[Collector], t: float) -> str | None:
     best_id, best_d = None, float("inf")
     for c in collectors:
+        if c.placed_at_seconds > t:
+            continue
         d = haversine_m(lon, lat, c.lon, c.lat)
         if d <= c.radius_m and d < best_d:
             best_id, best_d = c.id, d
@@ -65,7 +69,7 @@ def _check(lon: float, lat: float, t: float, fld: Field, collectors: Sequence[Co
         return "outside", None
     if fld.is_land(lon, lat, t):
         return "beached", None
-    cp = _nearest_collector(lon, lat, collectors)
+    cp = _nearest_collector(lon, lat, collectors, t)
     if cp is not None:
         return "captured", cp
     return "floating", None
@@ -82,24 +86,36 @@ def drift_item(
     if frame_interval % dt:
         raise ValueError("frame_interval must be a multiple of dt")
     total = duration_days * 24 * 3600
-    steps_per_frame = frame_interval // dt
     factor = config.DRIFT_FACTOR.get(item.type, 1.0)
 
     lon, lat = item.lon, item.lat
-    status, captured_by = _check(lon, lat, 0, fld, collectors)
-    changed_at = 0 if status != "floating" else None
-    samples = [(0, round(lon, 5), round(lat, 5), status)]
+    t = item.placed_at_seconds
+    if not 0 <= t <= total:
+        raise ValueError("placement time must be within the experiment duration")
+    status, captured_by = _check(lon, lat, t, fld, collectors)
+    changed_at = t if status != "floating" else None
+    samples = [(t, round(lon, 5), round(lat, 5), status)]
+    activation_times = sorted({c.placed_at_seconds for c in collectors if t < c.placed_at_seconds <= total})
 
-    for step in range(1, total // dt + 1):
-        t = step * dt
+    while t < total:
+        # Split steps at placements so neither litter nor a collector is active
+        # before its exact timestamp. Hourly samples stay on the shared clock.
+        next_t = min(total, (t // dt + 1) * dt)
+        if activation_times:
+            next_t = min(next_t, activation_times[0])
+        step_seconds = next_t - t
+        previous_status = status
         if status == "floating":
-            u, v = fld.sample(lon, lat, t - dt)
-            lat += factor * v * dt / M_PER_DEG_LAT
-            lon += factor * u * dt / m_per_deg_lon(lat)
-            status, captured_by = _check(lon, lat, t, fld, collectors)
+            u, v = fld.sample(lon, lat, t)
+            lat += factor * v * step_seconds / M_PER_DEG_LAT
+            lon += factor * u * step_seconds / m_per_deg_lon(lat)
+            status, captured_by = _check(lon, lat, next_t, fld, collectors)
             if status != "floating":
-                changed_at = t
-        if step % steps_per_frame == 0:
+                changed_at = next_t
+        t = next_t
+        if activation_times and activation_times[0] == t:
+            activation_times.pop(0)
+        if t % frame_interval == 0 or t == total or status != previous_status:
             samples.append((t, round(lon, 5), round(lat, 5), status))
 
     return ItemOutcome(item.id, item.type, status, captured_by, changed_at, samples)

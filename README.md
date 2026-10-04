@@ -63,8 +63,49 @@ Publish the style and put its `mapbox://styles/...` URL in `VITE_MAPBOX_STYLE_UR
 - Placement-time-aware trajectories that begin when an item is added
 - Floating, captured, beached, and outside-region counts
 - Keyboard focus states and reduced-motion support
-- Mock trajectories isolated in `src/simulation.ts` for later FastAPI replacement
+- Backend-calculated trajectories from `POST /api/simulate`
+- Loading, retry, and land-validation feedback
+- Actual snapshot sources, dates, final results, and limitations in Data & assumptions
 
-## Backend handoff
+## Playback integration
 
-Replace `buildTrajectories()` with data from the planned FastAPI endpoints. Preserve coordinates as `[longitude, latitude]`, timestamps as elapsed seconds, and the four existing particle statuses.
+Set `VITE_API_BASE_URL` to the API address (for example `http://localhost:8001`).
+The launcher sets it automatically for its chosen backend port. When running
+servers separately, run the frontend with:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8001 npm run dev -- --port 5173 --strictPort
+```
+
+Place litter and press Play. The app fetches settings from `/api/meta`, then sends
+`{placements, durationDays: 1, collectorRadiusM, honourCollectors: true}` to
+`/api/simulate`. Each placement includes `placedAtSeconds` on the shared experiment
+timeline; all particles stop at the one-day endpoint. Pause, resume, and scrubbing
+use the downloaded result without further requests. Editing pauses playback and
+the next Play recalculates. Reset cancels pending work and clears the map.
+
+Backend synthetic-current fallback is explicitly labelled. A failed API request
+never substitutes frontend mock movement. Snapshot source and date, storage
+status, final totals, and assumptions are available in Data & assumptions.
+
+After updating an existing database, run the idempotent initialization script
+to add the item/time lookup index used by placement-aware timeline queries:
+
+```bash
+cd backend
+.venv/bin/python scripts/init_db.py
+```
+
+## Verification
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+Backend tests (run from `backend/`):
+
+```bash
+.venv/bin/python -m pytest -q
+```

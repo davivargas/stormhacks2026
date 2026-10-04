@@ -28,11 +28,11 @@ from app.schemas import (
     SimulateResponse,
     SnapshotInfo,
     Summary,
-    TimelineBucket,
     TimelineResponse,
     TrajectorySample,
 )
 from app.sim import engine
+from app.sim.timeline import timeline_of
 from app.sim.geo import bearing_deg
 from app.sim.snapshot import Field, current_slice_time, load_field, make_key
 
@@ -125,10 +125,11 @@ def build_response(
     parent_run_id: str | None = None,
 ) -> SimulateResponse:
     litter = [
-        engine.LitterItem(p.id, p.type, *p.coordinates) for p in req.placements if p.type != "collector"
+        engine.LitterItem(p.id, p.type, *p.coordinates, p.placed_at_seconds)
+        for p in req.placements if p.type != "collector"
     ]
     collectors = [
-        engine.Collector(p.id, *p.coordinates, req.collector_radius_m)
+        engine.Collector(p.id, *p.coordinates, req.collector_radius_m, p.placed_at_seconds)
         for p in req.placements
         if p.type == "collector"
     ]
@@ -187,17 +188,6 @@ def compare(req: SimulateRequest, fields: dict[str, Field]) -> CompareResponse:
         outside=w.outside - o.outside,
     )
     return CompareResponse(without=without, with_=with_, delta=delta)
-
-
-def timeline_of(resp: SimulateResponse) -> TimelineResponse:
-    n = len(resp.trajectories[0].samples) if resp.trajectories else 0
-    buckets = []
-    for i in range(n):
-        counts = {s: 0 for s in engine.STATUSES}
-        for traj in resp.trajectories:
-            counts[traj.samples[i].status] += 1
-        buckets.append(TimelineBucket(time_seconds=i * resp.sample_interval_seconds, **counts))
-    return TimelineResponse(run_id=resp.run_id, bucket_seconds=resp.sample_interval_seconds, buckets=buckets)
 
 
 def arrows_of(fld: Field) -> list[CurrentArrow]:
