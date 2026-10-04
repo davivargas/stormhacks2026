@@ -253,7 +253,7 @@ export function OceanMap({
 
     const handleClick = (event: MapMouseEvent) => {
       const activeTool = toolRef.current;
-      if (activeTool === "explore") {
+      if (activeTool === "explore" || activeTool === "narrate") {
         if (!map.getLayer("particles-layer")) return;
         const features = map.queryRenderedFeatures(event.point, { layers: ["particles-layer"] });
         const id = features[0]?.properties?.id;
@@ -281,6 +281,10 @@ export function OceanMap({
       const activeTool = toolRef.current;
       if (activeTool === "explore") {
         map.getCanvas().style.cursor = "grab";
+      } else if (activeTool === "narrate") {
+        const hasLitter = Boolean(map.getLayer("particles-layer"))
+          && map.queryRenderedFeatures(event.point, { layers: ["particles-layer"] }).length > 0;
+        map.getCanvas().style.cursor = hasLitter ? "pointer" : "not-allowed";
       } else if (activeTool === "remove") {
         if (!map.getLayer("particles-layer") || !map.getLayer("collectors-layer")) {
           map.getCanvas().style.cursor = "not-allowed";

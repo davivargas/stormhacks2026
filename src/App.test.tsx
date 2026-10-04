@@ -7,8 +7,16 @@ import { requestStoryAudio, requestStoryForRun } from "./storyApi";
 import type { Coordinates } from "./types";
 
 vi.mock("./OceanMap", () => ({
-  OceanMap: ({ onPlace, frames }: { onPlace: (coordinates: Coordinates) => void; frames: unknown[] }) => <>
+  OceanMap: ({ onPlace, onSelect, frames, trajectories }: {
+    onPlace: (coordinates: Coordinates) => void;
+    onSelect: (id: string) => void;
+    frames: unknown[];
+    trajectories: Array<{ id: string }>;
+  }) => <>
     <button onClick={() => onPlace([-130, 40])}>Drop at test ocean point</button>
+    {trajectories.map(({ id }, index) => (
+      <button key={id} onClick={() => onSelect(id)}>Pick litter {index + 1}</button>
+    ))}
     <output data-testid="frames">{JSON.stringify(frames)}</output>
   </>,
 }));
@@ -179,5 +187,26 @@ describe("reset all", () => {
     fireEvent.click(screen.getByRole("button", { name: /Reset all/ }));
     await waitFor(() => expect(screen.getByText(START_MESSAGE)).toBeTruthy());
     expect(screen.queryByText(FAILED_MESSAGE)).toBeNull();
+  });
+});
+
+describe("narrate tool", () => {
+  it("narrates the litter picked with the Narrate tool", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /Bottle/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Drop at test ocean point" }));
+    fireEvent.click(screen.getByRole("button", { name: "Drop at test ocean point" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Pick litter 2" })).toBeTruthy());
+    const firstId = vi.mocked(requestSimulation).mock.calls.at(-1)![0][0].id;
+
+    const narrate = screen.getByRole("button", { name: /Narrate/ });
+    fireEvent.click(narrate);
+    expect(narrate.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Pick litter 1" }));
+
+    expect(narrate.getAttribute("aria-pressed")).toBe("false");
+    await waitFor(() => expect(screen.getByText("Shelly will tell this bottle's story. Press play to hear it!")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Play simulation and narration" }));
+    await waitFor(() => expect(requestStoryForRun).toHaveBeenCalledWith("run-2", firstId));
   });
 });

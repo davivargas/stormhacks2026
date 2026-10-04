@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Eraser,
   Info,
+  Mic,
   X,
   Pause,
   Play,
@@ -39,6 +40,7 @@ const tools: Array<{ id: Tool; label: string; detail: string; icon: typeof CupSo
   { id: "bag", label: "Bag", detail: "Place in water", icon: Backpack },
   { id: "foam", label: "Foam", detail: "Place in water", icon: Sparkles },
   { id: "collector", label: "Cleanup", detail: "Catch litter", icon: Anchor },
+  { id: "narrate", label: "Narrate", detail: "Pick a litter", icon: Mic },
   { id: "remove", label: "Remove", detail: "Pick an item", icon: Eraser },
 ];
 
@@ -339,7 +341,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   };
 
   const placeItem = (coordinates: Coordinates) => {
-    if (tool === "explore" || tool === "remove") return;
+    if (tool === "explore" || tool === "narrate" || tool === "remove") return;
     stopPlayback();
     const placedAtSeconds = placementTime(timeSeconds, durationSeconds);
     setTimeSeconds(placedAtSeconds);
@@ -358,6 +360,11 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     if (!trajectory) return;
     stopPlayback();
     setSelectedParticleId(id);
+    if (tool === "narrate") {
+      setTool("explore");
+      setMessage(`Shelly will tell this ${trajectory.type}'s story. Press play to hear it!`);
+      return;
+    }
     const item = simulationRun?.items.find(({ id: itemId }) => itemId === trajectory.id);
     const finalStatus = item ? ` It ends ${statusLabel(item.finalStatus)}.` : "";
     setMessage(`${trajectory.type[0].toUpperCase()}${trajectory.type.slice(1)} selected from the backend run.${finalStatus} Press play for its journey.`);

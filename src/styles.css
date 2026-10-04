@@ -484,6 +484,7 @@ input:focus-visible {
 .tool-icon--bag { background: #ffe0e8; color: #d85578; }
 .tool-icon--foam { background: #fff0b6; color: #ac7510; }
 .tool-icon--collector { background: #d9eeff; color: #2479a7; }
+.tool-icon--narrate { background: #ece4ff; color: #6b4fc4; }
 .tool-icon--remove { background: #e8edf0; color: #526b78; }
 .tool-icon--reset { background: #ffe3dc; color: #c4492f; }
 
