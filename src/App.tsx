@@ -18,7 +18,7 @@ import {
   INITIAL_PLACEMENTS,
   interpolateFrame,
 } from "./simulation";
-import type { ComparisonMode, Coordinates, ParticleStatus, Placement, Tool } from "./types";
+import type { Coordinates, ParticleStatus, Placement, Tool } from "./types";
 
 const tools: Array<{ id: Tool; label: string; detail: string; icon: typeof CupSoda }> = [
   { id: "bottle", label: "Bottle", detail: "Place in water", icon: CupSoda },
@@ -44,15 +44,14 @@ function formatTime(seconds: number) {
 function App() {
   const [placements, setPlacements] = useState<Placement[]>(INITIAL_PLACEMENTS);
   const [tool, setTool] = useState<Tool>("explore");
-  const [comparison, setComparison] = useState<ComparisonMode>("with");
   const [timeSeconds, setTimeSeconds] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [message, setMessage] = useState("Place some litter, then press play!");
   const lastFrameRef = useRef<number | null>(null);
 
   const trajectories = useMemo(
-    () => buildTrajectories(placements, comparison),
-    [placements, comparison],
+    () => buildTrajectories(placements, "with"),
+    [placements],
   );
   const frames = useMemo(
     () => interpolateFrame(trajectories, timeSeconds),
@@ -198,10 +197,6 @@ function App() {
                   setTimeSeconds(Number(event.target.value));
                 }}
               />
-            </div>
-            <div className="comparison-control" role="group" aria-label="Compare cleanup results">
-              <button className={comparison === "without" ? "active" : ""} type="button" onClick={() => setComparison("without")}>Without</button>
-              <button className={comparison === "with" ? "active" : ""} type="button" onClick={() => setComparison("with")}>With cleanup</button>
             </div>
           </div>
         </section>

@@ -485,32 +485,6 @@ input:focus-visible {
   box-shadow: 0 2px 5px rgba(23, 59, 80, 0.3);
 }
 
-.comparison-control {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 3px;
-  padding: 4px;
-  border-radius: 14px;
-  background: #eaf3f4;
-}
-
-.comparison-control button {
-  padding: 8px 10px;
-  border: 0;
-  border-radius: 10px;
-  color: #6a838f;
-  background: transparent;
-  font-size: 0.67rem;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.comparison-control button.active {
-  color: #173b50;
-  background: #fff;
-  box-shadow: 0 2px 5px rgba(23, 59, 80, 0.12);
-}
-
 .source-button {
   position: absolute;
   bottom: 19px;
@@ -572,7 +546,6 @@ input:focus-visible {
   }
 
   .status-row,
-  .comparison-control,
   .reset-button {
     display: none;
   }

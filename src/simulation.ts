@@ -1,4 +1,4 @@
-import type { Feature, FeatureCollection, LineString, Point, Polygon } from "geojson";
+import type { FeatureCollection, LineString, Point } from "geojson";
 import type {
   ComparisonMode,
   Coordinates,
@@ -9,29 +9,6 @@ import type {
 } from "./types";
 
 export const DURATION_SECONDS = 24 * 60 * 60;
-
-export const REGION_BOUNDS: [Coordinates, Coordinates] = [
-  [-123.78, 49.05],
-  [-122.92, 49.65],
-];
-
-export const PLAYABLE_WATER: Feature<Polygon> = {
-  type: "Feature",
-  properties: {},
-  geometry: {
-    type: "Polygon",
-    coordinates: [[
-      [-123.74, 49.56],
-      [-123.56, 49.62],
-      [-123.16, 49.53],
-      [-123.02, 49.36],
-      [-123.12, 49.12],
-      [-123.42, 49.08],
-      [-123.62, 49.2],
-      [-123.74, 49.56],
-    ]],
-  },
-};
 
 export const INITIAL_PLACEMENTS: Placement[] = [];
 

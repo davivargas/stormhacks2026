@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import circle from "@turf/circle";
 import { featureCollection, point } from "@turf/helpers";
 import mapboxgl, { type GeoJSONSource, type MapMouseEvent } from "mapbox-gl";
@@ -7,8 +6,6 @@ import { AlertCircle, KeyRound } from "lucide-react";
 import { registerMapSprites } from "./mapSprites";
 import {
   particleGeoJson,
-  PLAYABLE_WATER,
-  REGION_BOUNDS,
   trailGeoJson,
 } from "./simulation";
 import type { ParticleFrame, ParticleTrajectory, Placement, Tool } from "./types";
@@ -26,6 +23,32 @@ interface OceanMapProps {
 
 const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 const styleUrl = import.meta.env.VITE_MAPBOX_STYLE_URL || "mapbox://styles/mapbox/standard";
+
+function hideBasemapRoads(map: mapboxgl.Map) {
+  const style = map.getStyle();
+  const roadLayerPattern = /(?:road|motorway|highway|street)/i;
+
+  style.layers
+    .filter((layer) => roadLayerPattern.test(layer.id))
+    .forEach((layer) => map.setLayoutProperty(layer.id, "visibility", "none"));
+
+  // Mapbox Standard keeps its internal road layers behind an import, so they
+  // must be configured through the import rather than ordinary layer IDs.
+  style.imports?.forEach((styleImport) => {
+    map.setConfigProperty(styleImport.id, "showRoadLabels", false);
+    map.setConfigProperty(styleImport.id, "showPedestrianRoads", false);
+    map.setConfigProperty(styleImport.id, "showHdRoads", false);
+    map.setConfigProperty(styleImport.id, "show3dObjects", false);
+    map.setConfigProperty(styleImport.id, "show3dBuildings", false);
+    map.setConfigProperty(styleImport.id, "show3dTrees", false);
+    map.setConfigProperty(styleImport.id, "show3dLandmarks", false);
+    map.setConfigProperty(styleImport.id, "show3dFacades", false);
+    map.setConfigProperty(styleImport.id, "colorMotorways", "rgba(0, 0, 0, 0)");
+    map.setConfigProperty(styleImport.id, "colorTrunks", "rgba(0, 0, 0, 0)");
+    map.setConfigProperty(styleImport.id, "colorRoads", "rgba(0, 0, 0, 0)");
+    map.setConfigProperty(styleImport.id, "colorHdRoads", "rgba(0, 0, 0, 0)");
+  });
+}
 
 function collectorsGeoJson(placements: Placement[], timeSeconds: number) {
   return featureCollection(
@@ -54,7 +77,6 @@ function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames:
   }
 
   const sources: Array<[string, GeoJSON.GeoJSON]> = [
-    ["playable-water", PLAYABLE_WATER],
     ["trails", trailGeoJson(trajectories, timeSeconds)],
     ["particles", particleGeoJson(frames)],
     ["collectors", collectorsGeoJson(placements, timeSeconds)],
@@ -65,14 +87,6 @@ function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames:
     if (!map.getSource(id)) map.addSource(id, { type: "geojson", data });
   });
 
-  if (!map.getLayer("playable-water-fill")) {
-    map.addLayer({
-      id: "playable-water-fill",
-      type: "fill",
-      source: "playable-water",
-      paint: { "fill-color": "#35c7d0", "fill-opacity": 0.08 },
-    });
-  }
   if (!map.getLayer("placement-water-hit-area")) {
     map.addLayer({
       id: "placement-water-hit-area",
@@ -181,11 +195,12 @@ export function OceanMap({
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: styleUrl,
-      bounds: REGION_BOUNDS,
-      fitBoundsOptions: { padding: { top: 100, right: 90, bottom: 150, left: 300 } },
-      minZoom: 8,
+      center: [0, 20],
+      zoom: 1.3,
+      pitch: 0,
+      projection: "mercator",
+      maxPitch: 0,
       maxZoom: 12.5,
-      maxBounds: [[-124.25, 48.72], [-122.55, 49.92]],
       pitchWithRotate: false,
       dragRotate: false,
       touchPitch: false,
@@ -197,18 +212,19 @@ export function OceanMap({
 
     const handleStyleLoad = () => {
       const data = mapDataRef.current;
+      map.setProjection("mercator");
+      map.setTerrain(null);
+      hideBasemapRoads(map);
       addSimulationLayers(map, data.placements, data.frames, data.trajectories, data.timeSeconds);
     };
     const isValidOceanPoint = (event: MapMouseEvent) => {
       if (!map.getLayer("placement-water-hit-area")) return false;
 
-      const coordinates: [number, number] = [event.lngLat.lng, event.lngLat.lat];
-      const insideExperimentRegion = booleanPointInPolygon(point(coordinates), PLAYABLE_WATER);
       const onRenderedWater = map.queryRenderedFeatures(event.point, {
         layers: ["placement-water-hit-area"],
       }).length > 0;
 
-      return insideExperimentRegion && onRenderedWater;
+      return onRenderedWater;
     };
 
     const handleClick = (event: MapMouseEvent) => {
