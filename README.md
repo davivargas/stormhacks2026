@@ -109,3 +109,42 @@ Backend tests (run from `backend/`):
 ```bash
 .venv/bin/python -m pytest -q
 ```
+
+## Deploy on Railway
+
+Deploy the frontend and backend as two services in the same Railway project.
+
+### Backend service
+
+- Connect the GitHub repository and set the service root directory to `/backend`.
+- Railway detects `backend/Dockerfile` automatically.
+- Generate a public domain for the service.
+- Set `CORS_ORIGIN` to the frontend's Railway URL, for example:
+  `https://your-frontend.up.railway.app`.
+- Add optional `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, and
+  `ELEVENLABS_VOICE_ID` variables if live stories and narration are enabled.
+- Set `RETRIEVAL_MODE=local` for the bundled educational passages, or configure
+  the TiDB variables before selecting `tidb`.
+
+The backend health check is available at `/health`.
+
+### Frontend service
+
+- Add a second service from the same repository with the root directory left at `/`.
+- Railway detects the root `Dockerfile`, which builds the Vite app and serves it
+  with Nginx.
+- Set these variables on the frontend service before deploying:
+
+```text
+VITE_API_BASE_URL=https://your-backend.up.railway.app
+VITE_MAPBOX_ACCESS_TOKEN=your_public_mapbox_token
+VITE_MAPBOX_STYLE_URL=mapbox://styles/your-account/your-style
+```
+
+The frontend container listens on Railway's injected `PORT` and includes an
+SPA fallback so direct routes continue to load correctly. Because Vite embeds
+`VITE_*` values at build time, redeploy the frontend after changing them.
+
+After both services deploy, replace the placeholder backend and frontend
+domains in the variables with the generated Railway domains and redeploy both
+services once.

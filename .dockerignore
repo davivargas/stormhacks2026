@@ -1,0 +1,13 @@
+.git
+.github
+.vscode
+.env
+.env.*
+!.env.example
+node_modules
+dist
+.vite
+backend/.data
+backend/.venv
+**/__pycache__
+**/*.pyc
