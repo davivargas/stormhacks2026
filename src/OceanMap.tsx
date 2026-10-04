@@ -195,11 +195,11 @@ export function OceanMap({
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
 
     const handleMapError = (event: mapboxgl.ErrorEvent) => {
-      if (event.error.message.toLowerCase().includes("access token")) {
-        map.remove();
-        mapRef.current = null;
-        setMapError(true);
-      }
+      if (mapRef.current !== map) return;
+      console.warn("Mapbox could not load the configured map:", event.error.message);
+      map.remove();
+      mapRef.current = null;
+      setMapError(true);
     };
     const handleStyleLoad = () => {
       const data = mapDataRef.current;
