@@ -27,18 +27,18 @@ interface OceanMapProps {
 const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 const styleUrl = import.meta.env.VITE_MAPBOX_STYLE_URL || "mapbox://styles/mapbox/standard";
 
-function collectorsGeoJson(placements: Placement[]) {
+function collectorsGeoJson(placements: Placement[], timeSeconds: number) {
   return featureCollection(
     placements
-      .filter((item) => item.type === "collector")
+      .filter((item) => item.type === "collector" && item.placedAtSeconds <= timeSeconds)
       .map((item) => point(item.coordinates, { id: item.id, type: item.type })),
   );
 }
 
-function collectionAreasGeoJson(placements: Placement[]) {
+function collectionAreasGeoJson(placements: Placement[], timeSeconds: number) {
   return featureCollection(
     placements
-      .filter((item) => item.type === "collector")
+      .filter((item) => item.type === "collector" && item.placedAtSeconds <= timeSeconds)
       .map((item) => circle(item.coordinates, 7, { units: "kilometers", steps: 48 })),
   );
 }
@@ -46,12 +46,19 @@ function collectionAreasGeoJson(placements: Placement[]) {
 function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames: ParticleFrame[], trajectories: ParticleTrajectory[], timeSeconds: number) {
   registerMapSprites(map);
 
+  if (!map.getSource("placement-streets")) {
+    map.addSource("placement-streets", {
+      type: "vector",
+      url: "mapbox://mapbox.mapbox-streets-v8",
+    });
+  }
+
   const sources: Array<[string, GeoJSON.GeoJSON]> = [
     ["playable-water", PLAYABLE_WATER],
     ["trails", trailGeoJson(trajectories, timeSeconds)],
     ["particles", particleGeoJson(frames)],
-    ["collectors", collectorsGeoJson(placements)],
-    ["collection-areas", collectionAreasGeoJson(placements)],
+    ["collectors", collectorsGeoJson(placements, timeSeconds)],
+    ["collection-areas", collectionAreasGeoJson(placements, timeSeconds)],
   ];
 
   sources.forEach(([id, data]) => {
@@ -64,6 +71,18 @@ function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames:
       type: "fill",
       source: "playable-water",
       paint: { "fill-color": "#35c7d0", "fill-opacity": 0.08 },
+    });
+  }
+  if (!map.getLayer("placement-water-hit-area")) {
+    map.addLayer({
+      id: "placement-water-hit-area",
+      type: "fill",
+      source: "placement-streets",
+      "source-layer": "water",
+      paint: {
+        "fill-color": "#35c7d0",
+        "fill-opacity": 0.001,
+      },
     });
   }
   if (!map.getLayer("collection-area-fill")) {
@@ -180,27 +199,58 @@ export function OceanMap({
       const data = mapDataRef.current;
       addSimulationLayers(map, data.placements, data.frames, data.trajectories, data.timeSeconds);
     };
+    const isValidOceanPoint = (event: MapMouseEvent) => {
+      if (!map.getLayer("placement-water-hit-area")) return false;
+
+      const coordinates: [number, number] = [event.lngLat.lng, event.lngLat.lat];
+      const insideExperimentRegion = booleanPointInPolygon(point(coordinates), PLAYABLE_WATER);
+      const onRenderedWater = map.queryRenderedFeatures(event.point, {
+        layers: ["placement-water-hit-area"],
+      }).length > 0;
+
+      return insideExperimentRegion && onRenderedWater;
+    };
+
     const handleClick = (event: MapMouseEvent) => {
       const activeTool = toolRef.current;
       if (activeTool === "explore") return;
 
       if (activeTool === "remove") {
+        if (!map.getLayer("particles-layer") || !map.getLayer("collectors-layer")) return;
         const features = map.queryRenderedFeatures(event.point, { layers: ["particles-layer", "collectors-layer"] });
         const id = features[0]?.properties?.id;
         if (typeof id === "string") onRemoveRef.current(id);
         return;
       }
 
-      const coordinates: [number, number] = [event.lngLat.lng, event.lngLat.lat];
-      if (!booleanPointInPolygon(point(coordinates), PLAYABLE_WATER)) {
+      if (!isValidOceanPoint(event)) {
         onInvalidPlacementRef.current();
         return;
       }
-      onPlaceRef.current(coordinates);
+      onPlaceRef.current([event.lngLat.lng, event.lngLat.lat]);
+    };
+
+    const handleMouseMove = (event: MapMouseEvent) => {
+      const activeTool = toolRef.current;
+      if (activeTool === "explore") {
+        map.getCanvas().style.cursor = "grab";
+      } else if (activeTool === "remove") {
+        if (!map.getLayer("particles-layer") || !map.getLayer("collectors-layer")) {
+          map.getCanvas().style.cursor = "not-allowed";
+          return;
+        }
+        const hasRemovableItem = map.queryRenderedFeatures(event.point, {
+          layers: ["particles-layer", "collectors-layer"],
+        }).length > 0;
+        map.getCanvas().style.cursor = hasRemovableItem ? "pointer" : "not-allowed";
+      } else {
+        map.getCanvas().style.cursor = isValidOceanPoint(event) ? "crosshair" : "not-allowed";
+      }
     };
 
     map.on("style.load", handleStyleLoad);
     map.on("click", handleClick);
+    map.on("mousemove", handleMouseMove);
 
     return () => {
       map.remove();
@@ -214,8 +264,8 @@ export function OceanMap({
     const updates: Array<[string, GeoJSON.GeoJSON]> = [
       ["trails", trailGeoJson(trajectories, timeSeconds)],
       ["particles", particleGeoJson(frames)],
-      ["collectors", collectorsGeoJson(placements)],
-      ["collection-areas", collectionAreasGeoJson(placements)],
+      ["collectors", collectorsGeoJson(placements, timeSeconds)],
+      ["collection-areas", collectionAreasGeoJson(placements, timeSeconds)],
     ];
     updates.forEach(([id, data]) => (map.getSource(id) as GeoJSONSource | undefined)?.setData(data));
   }, [frames, placements, timeSeconds, trajectories]);

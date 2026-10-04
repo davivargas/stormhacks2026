@@ -93,7 +93,12 @@ function App() {
 
   const placeItem = (coordinates: Coordinates) => {
     if (tool === "explore" || tool === "remove") return;
-    const item: Placement = { id: `${tool}-${crypto.randomUUID()}`, type: tool, coordinates };
+    const item: Placement = {
+      id: `${tool}-${crypto.randomUUID()}`,
+      type: tool,
+      coordinates,
+      placedAtSeconds: timeSeconds,
+    };
     setPlacements((current) => [...current, item]);
     setMessage(tool === "collector" ? "Great cleanup spot! Try the comparison." : "Splash! Your litter is ready to travel.");
   };
@@ -120,7 +125,7 @@ function App() {
         timeSeconds={timeSeconds}
         onPlace={placeItem}
         onRemove={removeItem}
-        onInvalidPlacement={() => setMessage("Try a spot inside the sparkling water zone.")}
+        onInvalidPlacement={() => setMessage("Choose a spot in the ocean, away from land!")}
       />
 
       <div className="map-overlay">

@@ -29,8 +29,10 @@ Publish the style and put its `mapbox://styles/...` URL in `VITE_MAPBOX_STYLE_UR
 
 - Full-viewport responsive map layout
 - Mapbox GeoJSON sources for particles, trails, and cleanup zones
+- Ocean-only placement using Mapbox coastline water geometry
 - Bottle, bag, foam, cleanup, and removal tools
 - Play, pause, restart, and timeline scrubbing
+- Placement-time-aware trajectories that begin when an item is added
 - With/without cleanup comparison
 - Floating, captured, beached, and outside-region counts
 - Keyboard focus states and reduced-motion support
