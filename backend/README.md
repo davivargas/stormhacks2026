@@ -68,7 +68,7 @@ Use `data.totalSeconds` for the timeline length instead of the fixed `DURATION_S
 
 ## Requests
 
-- `POST /api/simulate` takes `{placements, durationDays, collectorRadiusM}`. `collectorRadiusM` is optional (default 10000 m).
+- `POST /api/simulate` takes `{placements, durationDays, collectorRadiusM, honourCollectors}`. `collectorRadiusM` is optional (default 10000 m). `honourCollectors` is optional and defaults to `false`: collectors are listed in the response with `capturedCount: 0` but do not capture anything. Send `true` to let them capture litter.
 - `POST /api/compare` takes the same body and returns `{without, with, delta}`: `without` ignores the collectors, `with` honours them, and `delta` is `with` minus `without` for the four status counts.
 - Limits per run: at most 50 litter items, 20 collectors and 8 distinct areas (half-degree boxes); durations of 1 to 30 whole days. Breaking a limit is a 422 `invalid_request`.
 

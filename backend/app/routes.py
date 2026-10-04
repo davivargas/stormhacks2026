@@ -268,7 +268,7 @@ def currents(
 
 @router.post("/simulate", response_model=SimulateResponse)
 def simulate(req: SimulateRequest) -> SimulateResponse:
-    return build_response(req, load_fields(req))
+    return build_response(req, load_fields(req), honour_collectors=req.honour_collectors)
 
 
 @router.post("/compare", response_model=CompareResponse)

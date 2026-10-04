@@ -45,6 +45,9 @@ class SimulateRequest(ApiModel):
         default=config.DURATION_DEFAULT_DAYS, ge=config.DURATION_MIN_DAYS, le=config.DURATION_MAX_DAYS
     )
     collector_radius_m: float = Field(default=config.DEFAULT_COLLECTOR_RADIUS_M, gt=0, le=200_000)
+    # Collectors are placed and reported either way; they only capture litter when this is true.
+    # Off by default for now; /compare always runs both ways.
+    honour_collectors: bool = False
 
     @field_validator("placements")
     @classmethod
