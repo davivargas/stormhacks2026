@@ -1,15 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import circle from "@turf/circle";
 import { featureCollection, point } from "@turf/helpers";
 import mapboxgl, { type GeoJSONSource, type MapMouseEvent } from "mapbox-gl";
 import { AlertCircle, KeyRound } from "lucide-react";
 import { registerMapSprites } from "./mapSprites";
 import {
-  currentGeoJson,
   particleGeoJson,
-  PLAYABLE_WATER,
-  REGION_BOUNDS,
   trailGeoJson,
 } from "./simulation";
 import type { ParticleFrame, ParticleTrajectory, Placement, Tool } from "./types";
@@ -20,99 +16,90 @@ interface OceanMapProps {
   frames: ParticleFrame[];
   trajectories: ParticleTrajectory[];
   timeSeconds: number;
-  selectedParticleId: string | null;
+  selectedParticleId?: string | null;
   onPlace: (coordinates: [number, number]) => void;
   onRemove: (id: string) => void;
-  onSelect: (id: string) => void;
+  onSelect?: (id: string) => void;
   onInvalidPlacement: () => void;
 }
 
 const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 const styleUrl = import.meta.env.VITE_MAPBOX_STYLE_URL || "mapbox://styles/mapbox/light-v11";
 
-function collectorsGeoJson(placements: Placement[]) {
+function hideBasemapRoads(map: mapboxgl.Map) {
+  const style = map.getStyle();
+  const roadLayerPattern = /(?:road|motorway|highway|street)/i;
+
+  style.layers
+    .filter((layer) => roadLayerPattern.test(layer.id) || layer.type === "fill-extrusion")
+    .forEach((layer) => map.setLayoutProperty(layer.id, "visibility", "none"));
+
+  // Standard's internal layers are exposed through import configuration.
+  style.imports?.forEach((styleImport) => {
+    if (!/^mapbox:\/\/styles\/mapbox\/standard(?:-satellite)?$/.test(styleImport.url)) return;
+
+    map.setConfigProperty(styleImport.id, "showRoadLabels", false);
+    map.setConfigProperty(styleImport.id, "showPedestrianRoads", false);
+    map.setConfigProperty(styleImport.id, "showHdRoads", false);
+    map.setConfigProperty(styleImport.id, "show3dObjects", false);
+    map.setConfigProperty(styleImport.id, "show3dBuildings", false);
+    map.setConfigProperty(styleImport.id, "show3dTrees", false);
+    map.setConfigProperty(styleImport.id, "show3dLandmarks", false);
+    map.setConfigProperty(styleImport.id, "show3dFacades", false);
+    map.setConfigProperty(styleImport.id, "colorMotorways", "rgba(0, 0, 0, 0)");
+    map.setConfigProperty(styleImport.id, "colorTrunks", "rgba(0, 0, 0, 0)");
+    map.setConfigProperty(styleImport.id, "colorRoads", "rgba(0, 0, 0, 0)");
+    map.setConfigProperty(styleImport.id, "colorHdRoads", "rgba(0, 0, 0, 0)");
+  });
+}
+
+function collectorsGeoJson(placements: Placement[], timeSeconds: number) {
   return featureCollection(
     placements
-      .filter((item) => item.type === "collector")
+      .filter((item) => item.type === "collector" && item.placedAtSeconds <= timeSeconds)
       .map((item) => point(item.coordinates, { id: item.id, type: item.type })),
   );
 }
 
-function collectionAreasGeoJson(placements: Placement[]) {
+function collectionAreasGeoJson(placements: Placement[], timeSeconds: number) {
   return featureCollection(
     placements
-      .filter((item) => item.type === "collector")
+      .filter((item) => item.type === "collector" && item.placedAtSeconds <= timeSeconds)
       .map((item) => circle(item.coordinates, 7, { units: "kilometers", steps: 48 })),
   );
 }
 
-function syncParticleMarkers(
-  map: mapboxgl.Map,
-  markers: Map<string, mapboxgl.Marker>,
-  frames: ParticleFrame[],
-  selectedParticleId: string | null,
-  onSelect: (id: string) => void,
-) {
-  const visibleFrames = frames.filter(({ status }) => status !== "outside");
-  const visibleIds = new Set(visibleFrames.map(({ id }) => id));
-
-  markers.forEach((marker, id) => {
-    if (visibleIds.has(id)) return;
-    marker.remove();
-    markers.delete(id);
-  });
-
-  visibleFrames.forEach((frame) => {
-    let marker = markers.get(frame.id);
-    if (!marker) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "particle-hit-target";
-      button.setAttribute("aria-label", `Select ${frame.type} journey`);
-      button.addEventListener("click", (event) => {
-        event.stopPropagation();
-        onSelect(frame.id);
-      });
-      marker = new mapboxgl.Marker({ element: button, anchor: "center" })
-        .setLngLat(frame.coordinates)
-        .addTo(map);
-      markers.set(frame.id, marker);
-    }
-    marker.setLngLat(frame.coordinates);
-    marker.getElement().classList.toggle("particle-hit-target--selected", frame.id === selectedParticleId);
-    marker.getElement().setAttribute("aria-pressed", String(frame.id === selectedParticleId));
-  });
-}
-
-function addSimulationLayers(
-  map: mapboxgl.Map,
-  placements: Placement[],
-  frames: ParticleFrame[],
-  trajectories: ParticleTrajectory[],
-  timeSeconds: number,
-  selectedParticleId: string | null,
-) {
+function addSimulationLayers(map: mapboxgl.Map, placements: Placement[], frames: ParticleFrame[], trajectories: ParticleTrajectory[], timeSeconds: number) {
   registerMapSprites(map);
 
+  if (!map.getSource("placement-streets")) {
+    map.addSource("placement-streets", {
+      type: "vector",
+      url: "mapbox://mapbox.mapbox-streets-v8",
+    });
+  }
+
   const sources: Array<[string, GeoJSON.GeoJSON]> = [
-    ["playable-water", PLAYABLE_WATER],
-    ["current-arrows", currentGeoJson(timeSeconds)],
     ["trails", trailGeoJson(trajectories, timeSeconds)],
     ["particles", particleGeoJson(frames)],
-    ["collectors", collectorsGeoJson(placements)],
-    ["collection-areas", collectionAreasGeoJson(placements)],
+    ["collectors", collectorsGeoJson(placements, timeSeconds)],
+    ["collection-areas", collectionAreasGeoJson(placements, timeSeconds)],
   ];
 
   sources.forEach(([id, data]) => {
     if (!map.getSource(id)) map.addSource(id, { type: "geojson", data });
   });
 
-  if (!map.getLayer("playable-water-fill")) {
+  if (!map.getLayer("placement-water-hit-area")) {
     map.addLayer({
-      id: "playable-water-fill",
+      id: "placement-water-hit-area",
       type: "fill",
-      source: "playable-water",
-      paint: { "fill-color": "#35c7d0", "fill-opacity": 0.08 },
+      source: "placement-streets",
+      "source-layer": "water",
+      paint: {
+        "fill-color": "#35c7d0",
+        "fill-opacity": 0.001,
+      },
     });
   }
   if (!map.getLayer("collection-area-fill")) {
@@ -127,21 +114,6 @@ function addSimulationLayers(
       type: "line",
       source: "collection-areas",
       paint: { "line-color": "#e6a92f", "line-width": 2, "line-dasharray": [2, 2] },
-    });
-  }
-  if (!map.getLayer("current-arrows-layer")) {
-    map.addLayer({
-      id: "current-arrows-layer",
-      type: "symbol",
-      source: "current-arrows",
-      layout: {
-        "icon-image": "current-arrow",
-        "icon-size": 0.34,
-        "icon-rotate": ["get", "bearing"],
-        "icon-allow-overlap": true,
-        "icon-ignore-placement": true,
-      },
-      paint: { "icon-opacity": 0.64 },
     });
   }
   if (!map.getLayer("trail-halo")) {
@@ -173,30 +145,12 @@ function addSimulationLayers(
   }
   if (!map.getLayer("particles-layer")) {
     map.addLayer({
-      id: "selected-particle-halo",
-      type: "circle",
-      source: "particles",
-      filter: ["==", ["get", "id"], selectedParticleId ?? ""],
-      paint: {
-        "circle-radius": 19,
-        "circle-color": "#ffd45a",
-        "circle-opacity": 0.62,
-        "circle-stroke-color": "#ffffff",
-        "circle-stroke-width": 4,
-      },
-    });
-    map.addLayer({
       id: "particles-layer",
       type: "symbol",
       source: "particles",
       layout: {
         "icon-image": ["get", "type"],
-        "icon-size": [
-          "case",
-          ["==", ["get", "id"], selectedParticleId ?? ""],
-          0.88,
-          0.62,
-        ],
+        "icon-size": 0.62,
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
       },
@@ -213,24 +167,22 @@ export function OceanMap({
   frames,
   trajectories,
   timeSeconds,
-  selectedParticleId,
+  onSelect,
   onPlace,
   onRemove,
-  onSelect,
   onInvalidPlacement,
 }: OceanMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
-  const particleMarkersRef = useRef(new Map<string, mapboxgl.Marker>());
   const [mapError, setMapError] = useState(false);
   const toolRef = useRef(tool);
   const onPlaceRef = useRef(onPlace);
   const onRemoveRef = useRef(onRemove);
   const onSelectRef = useRef(onSelect);
   const onInvalidPlacementRef = useRef(onInvalidPlacement);
-  const mapDataRef = useRef({ placements, frames, trajectories, timeSeconds, selectedParticleId });
+  const mapDataRef = useRef({ placements, frames, trajectories, timeSeconds });
 
-  mapDataRef.current = { placements, frames, trajectories, timeSeconds, selectedParticleId };
+  mapDataRef.current = { placements, frames, trajectories, timeSeconds };
 
   useEffect(() => {
     toolRef.current = tool;
@@ -246,16 +198,16 @@ export function OceanMap({
   useEffect(() => {
     if (!token || !containerRef.current) return;
 
-    const particleMarkers = particleMarkersRef.current;
     mapboxgl.accessToken = token;
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: styleUrl,
-      bounds: REGION_BOUNDS,
-      fitBoundsOptions: { padding: { top: 100, right: 90, bottom: 150, left: 300 } },
-      minZoom: 8,
+      center: [0, 20],
+      zoom: 1.3,
+      pitch: 0,
+      projection: "mercator",
+      maxPitch: 0,
       maxZoom: 12.5,
-      maxBounds: [[-124.25, 48.72], [-122.55, 49.92]],
       pitchWithRotate: false,
       dragRotate: false,
       touchPitch: false,
@@ -272,63 +224,77 @@ export function OceanMap({
       mapRef.current = null;
       setMapError(true);
     };
-    const handleParticleClick = (event: MapMouseEvent) => {
-      if (toolRef.current !== "explore") return;
-      const id = event.features?.[0]?.properties?.id;
-      if (typeof id === "string") onSelectRef.current(id);
-    };
     const handleStyleLoad = () => {
       const data = mapDataRef.current;
-      addSimulationLayers(map, data.placements, data.frames, data.trajectories, data.timeSeconds, data.selectedParticleId);
-      syncParticleMarkers(
-        map,
-        particleMarkers,
-        data.frames,
-        data.selectedParticleId,
-        (id) => onSelectRef.current(id),
-      );
-      map.on("click", "particles-layer", handleParticleClick);
+      map.setProjection("mercator");
+      map.setTerrain(null);
+      hideBasemapRoads(map);
+      addSimulationLayers(map, data.placements, data.frames, data.trajectories, data.timeSeconds);
     };
+    const isValidOceanPoint = (event: MapMouseEvent) => {
+      if (!map.getLayer("placement-water-hit-area")) return false;
+
+      const onRenderedWater = map.queryRenderedFeatures(event.point, {
+        layers: ["placement-water-hit-area"],
+      }).length > 0;
+
+      return onRenderedWater;
+    };
+
     const handleClick = (event: MapMouseEvent) => {
       const activeTool = toolRef.current;
-      const hitBox: [[number, number], [number, number]] = [
-        [event.point.x - 18, event.point.y - 18],
-        [event.point.x + 18, event.point.y + 18],
-      ];
-      const particle = map.queryRenderedFeatures(hitBox, { layers: ["particles-layer"] })[0];
-      const particleId = particle?.properties?.id;
-
-      if (typeof particleId === "string" && activeTool !== "remove") {
-        onSelectRef.current(particleId);
+      if (activeTool === "explore") {
+        if (!map.getLayer("particles-layer")) return;
+        const features = map.queryRenderedFeatures(event.point, { layers: ["particles-layer"] });
+        const id = features[0]?.properties?.id;
+        if (typeof id === "string") onSelectRef.current?.(id);
         return;
       }
 
-      if (activeTool === "explore") return;
-
       if (activeTool === "remove") {
+        if (!map.getLayer("particles-layer") || !map.getLayer("collectors-layer")) return;
         const features = map.queryRenderedFeatures(event.point, { layers: ["particles-layer", "collectors-layer"] });
         const id = features[0]?.properties?.id;
         if (typeof id === "string") onRemoveRef.current(id);
         return;
       }
 
-      const coordinates: [number, number] = [event.lngLat.lng, event.lngLat.lat];
-      if (!booleanPointInPolygon(point(coordinates), PLAYABLE_WATER)) {
+      if (!isValidOceanPoint(event)) {
         onInvalidPlacementRef.current();
         return;
       }
+      const coordinates: [number, number] = [event.lngLat.wrap().lng, event.lngLat.lat];
       onPlaceRef.current(coordinates);
+    };
+
+    const handleMouseMove = (event: MapMouseEvent) => {
+      const activeTool = toolRef.current;
+      if (activeTool === "explore") {
+        map.getCanvas().style.cursor = "grab";
+      } else if (activeTool === "remove") {
+        if (!map.getLayer("particles-layer") || !map.getLayer("collectors-layer")) {
+          map.getCanvas().style.cursor = "not-allowed";
+          return;
+        }
+        const hasRemovableItem = map.queryRenderedFeatures(event.point, {
+          layers: ["particles-layer", "collectors-layer"],
+        }).length > 0;
+        map.getCanvas().style.cursor = hasRemovableItem ? "pointer" : "not-allowed";
+      } else {
+        map.getCanvas().style.cursor = isValidOceanPoint(event) ? "crosshair" : "not-allowed";
+      }
     };
 
     map.on("error", handleMapError);
     map.on("style.load", handleStyleLoad);
     map.on("click", handleClick);
+    map.on("mousemove", handleMouseMove);
 
     return () => {
-      particleMarkers.forEach((marker) => marker.remove());
-      particleMarkers.clear();
-      map.remove();
-      mapRef.current = null;
+      if (mapRef.current === map) {
+        map.remove();
+        mapRef.current = null;
+      }
     };
   }, []);
 
@@ -336,32 +302,13 @@ export function OceanMap({
     const map = mapRef.current;
     if (!map?.isStyleLoaded()) return;
     const updates: Array<[string, GeoJSON.GeoJSON]> = [
-      ["current-arrows", currentGeoJson(timeSeconds)],
       ["trails", trailGeoJson(trajectories, timeSeconds)],
       ["particles", particleGeoJson(frames)],
-      ["collectors", collectorsGeoJson(placements)],
-      ["collection-areas", collectionAreasGeoJson(placements)],
+      ["collectors", collectorsGeoJson(placements, timeSeconds)],
+      ["collection-areas", collectionAreasGeoJson(placements, timeSeconds)],
     ];
     updates.forEach(([id, data]) => (map.getSource(id) as GeoJSONSource | undefined)?.setData(data));
-    if (map.getLayer("selected-particle-halo")) {
-      map.setFilter("selected-particle-halo", ["==", ["get", "id"], selectedParticleId ?? ""]);
-    }
-    if (map.getLayer("particles-layer")) {
-      map.setLayoutProperty("particles-layer", "icon-size", [
-        "case",
-        ["==", ["get", "id"], selectedParticleId ?? ""],
-        0.88,
-        0.62,
-      ]);
-    }
-    syncParticleMarkers(
-      map,
-      particleMarkersRef.current,
-      frames,
-      selectedParticleId,
-      (id) => onSelectRef.current(id),
-    );
-  }, [frames, placements, selectedParticleId, timeSeconds, trajectories]);
+  }, [frames, placements, timeSeconds, trajectories]);
 
   if (!token || mapError) {
     return (

@@ -269,7 +269,7 @@ function App() {
 
   const placeItem = (coordinates: Coordinates) => {
     if (tool === "explore" || tool === "remove") return;
-    const item: Placement = { id: `${tool}-${crypto.randomUUID()}`, type: tool, coordinates };
+    const item: Placement = { id: `${tool}-${crypto.randomUUID()}`, type: tool, coordinates, placedAtSeconds: timeSeconds };
     setPlacements((current) => [...current, item]);
     if (item.type === "collector") {
       setMessage("Great cleanup spot! Try the comparison.");

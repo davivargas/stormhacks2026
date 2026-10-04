@@ -1,4 +1,4 @@
-import type { Feature, FeatureCollection, LineString, Point, Polygon } from "geojson";
+import type { FeatureCollection, LineString, Point } from "geojson";
 import type {
   ComparisonMode,
   Coordinates,
@@ -10,34 +10,11 @@ import type {
 
 export const DURATION_SECONDS = 24 * 60 * 60;
 
-export const REGION_BOUNDS: [Coordinates, Coordinates] = [
-  [-123.78, 49.05],
-  [-122.92, 49.65],
-];
-
-export const PLAYABLE_WATER: Feature<Polygon> = {
-  type: "Feature",
-  properties: {},
-  geometry: {
-    type: "Polygon",
-    coordinates: [[
-      [-123.74, 49.56],
-      [-123.56, 49.62],
-      [-123.16, 49.53],
-      [-123.02, 49.36],
-      [-123.12, 49.12],
-      [-123.42, 49.08],
-      [-123.62, 49.2],
-      [-123.74, 49.56],
-    ]],
-  },
-};
-
 export const INITIAL_PLACEMENTS: Placement[] = [
-  { id: "bottle-1", type: "bottle", coordinates: [-123.48, 49.27] },
-  { id: "bag-1", type: "bag", coordinates: [-123.23, 49.43] },
-  { id: "foam-1", type: "foam", coordinates: [-123.58, 49.5] },
-  { id: "collector-1", type: "collector", coordinates: [-123.31, 49.235] },
+  { id: "bottle-1", type: "bottle", coordinates: [-123.48, 49.27], placedAtSeconds: 0 },
+  { id: "bag-1", type: "bag", coordinates: [-123.23, 49.43], placedAtSeconds: 0 },
+  { id: "foam-1", type: "foam", coordinates: [-123.58, 49.5], placedAtSeconds: 0 },
+  { id: "collector-1", type: "collector", coordinates: [-123.31, 49.235], placedAtSeconds: 0 },
 ];
 
 const movement: Record<string, { east: number; north: number; curve: number }> = {
@@ -50,16 +27,20 @@ export function buildTrajectories(
   placements: Placement[],
   mode: ComparisonMode,
 ): ParticleTrajectory[] {
-  const hasCollector = placements.some((item) => item.type === "collector");
+  const collectors = placements.filter((item) => item.type === "collector");
 
   return placements
     .filter((item): item is Placement & { type: "bottle" | "bag" | "foam" } => item.type !== "collector")
     .map((item) => {
       const vector = movement[item.type];
-      const samples = Array.from({ length: 13 }, (_, index) => {
+      const sampleInterval = 2 * 60 * 60;
+      const sampleCount = Math.floor((DURATION_SECONDS - item.placedAtSeconds) / sampleInterval) + 1;
+      const samples = Array.from({ length: sampleCount }, (_, index) => {
+        const sampleTime = item.placedAtSeconds + index * sampleInterval;
+        const hasActiveCollector = collectors.some((collector) => collector.placedAtSeconds <= sampleTime);
         let status: ParticleStatus = "floating";
 
-        if (mode === "with" && hasCollector && item.type === "bottle" && index >= 6) {
+        if (mode === "with" && hasActiveCollector && item.type === "bottle" && index >= 6) {
           status = "captured";
         } else if (item.type === "bag" && index >= 10) {
           status = "beached";
@@ -71,7 +52,7 @@ export function buildTrajectories(
         const terminalWave = Math.sin(terminalIndex * 0.75) * vector.curve;
 
         return {
-          timeSeconds: index * 2 * 60 * 60,
+          timeSeconds: sampleTime,
           coordinates: [
             item.coordinates[0] + vector.east * terminalIndex,
             item.coordinates[1] + vector.north * terminalIndex + terminalWave,
@@ -88,7 +69,9 @@ export function interpolateFrame(
   trajectories: ParticleTrajectory[],
   timeSeconds: number,
 ): ParticleFrame[] {
-  return trajectories.map((trajectory) => {
+  return trajectories.flatMap((trajectory) => {
+    if (timeSeconds < trajectory.samples[0].timeSeconds) return [];
+
     const nextIndex = trajectory.samples.findIndex((sample) => sample.timeSeconds >= timeSeconds);
     const upperIndex = nextIndex === -1 ? trajectory.samples.length - 1 : nextIndex;
     const lowerIndex = Math.max(0, upperIndex - 1);
@@ -130,38 +113,20 @@ export function trailGeoJson(
   const frames = interpolateFrame(trajectories, timeSeconds);
   return {
     type: "FeatureCollection",
-    features: trajectories.map((trajectory, index) => {
+    features: trajectories.flatMap((trajectory) => {
+      const frame = frames.find((item) => item.id === trajectory.id);
+      if (!frame) return [];
+
       const completed = trajectory.samples
         .filter((sample) => sample.timeSeconds < timeSeconds)
         .map((sample) => sample.coordinates);
-      completed.push(frames[index].coordinates);
+      completed.push(frame.coordinates);
       return {
         type: "Feature",
         properties: { id: trajectory.id, type: trajectory.type },
         geometry: {
           type: "LineString",
           coordinates: completed.length > 1 ? completed : [completed[0], completed[0]],
-        },
-      };
-    }),
-  };
-}
-
-export function currentGeoJson(timeSeconds: number): FeatureCollection<Point> {
-  const columns = 6;
-  const rows = 5;
-  const phase = timeSeconds / DURATION_SECONDS;
-  return {
-    type: "FeatureCollection",
-    features: Array.from({ length: columns * rows }, (_, index) => {
-      const column = index % columns;
-      const row = Math.floor(index / columns);
-      return {
-        type: "Feature",
-        properties: { bearing: 72 + Math.sin(index * 0.8 + phase * Math.PI * 2) * 42 },
-        geometry: {
-          type: "Point",
-          coordinates: [-123.66 + column * 0.105, 49.15 + row * 0.095],
         },
       };
     }),

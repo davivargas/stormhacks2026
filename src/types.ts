@@ -10,6 +10,7 @@ export interface Placement {
   id: string;
   type: PlacementType;
   coordinates: Coordinates;
+  placedAtSeconds: number;
 }
 
 export interface TrajectorySample {
