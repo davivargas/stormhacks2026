@@ -130,8 +130,8 @@ input:focus-visible {
 }
 
 .mapboxgl-ctrl-top-right {
-  top: 16px;
-  right: 68px;
+  top: 67px;
+  right: 14px;
 }
 
 .mapboxgl-ctrl-group {
@@ -936,8 +936,8 @@ input:focus-visible {
   }
 
   .mapboxgl-ctrl-top-right {
-    top: 10px;
-    right: 60px;
+    top: 61px;
+    right: 10px;
   }
 
   .theme-toggle {
