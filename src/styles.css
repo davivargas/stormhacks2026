@@ -131,7 +131,7 @@ input:focus-visible {
 
 .mapboxgl-ctrl-top-right {
   top: 16px;
-  right: 14px;
+  right: 68px;
 }
 
 .mapboxgl-ctrl-group {
@@ -139,6 +139,24 @@ input:focus-visible {
   border: 2px solid rgba(23, 59, 80, 0.1);
   border-radius: 16px;
   box-shadow: 0 5px 0 rgba(23, 59, 80, 0.12) !important;
+}
+
+.theme-toggle {
+  position: absolute;
+  z-index: 2;
+  top: 16px;
+  right: 14px;
+  display: grid;
+  width: 43px;
+  height: 43px;
+  place-items: center;
+  padding: 0;
+  border: 2px solid rgba(23, 59, 80, 0.1);
+  border-radius: 16px;
+  color: #173b50;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 5px 0 rgba(23, 59, 80, 0.12);
+  cursor: pointer;
 }
 
 .map-fallback {
@@ -739,6 +757,91 @@ input:focus-visible {
   cursor: pointer;
 }
 
+.ocean-page--dark .theme-toggle {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #ffe58a;
+  background: rgba(24, 38, 53, 0.96);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
+}
+
+.ocean-page--dark .topbar,
+.ocean-page--dark .tool-panel,
+.ocean-page--dark .guide-bubble,
+.ocean-page--dark .playback-card {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e8f2f4;
+  background: rgba(24, 38, 53, 0.96);
+  box-shadow: 0 7px 0 rgba(0, 0, 0, 0.28);
+}
+
+.ocean-page--dark .brand,
+.ocean-page--dark .tool-button strong,
+.ocean-page--dark .current-key strong,
+.ocean-page--dark .timeline label,
+.ocean-page--dark .timeline label strong,
+.ocean-page--dark .guide-bubble p {
+  color: #e8f2f4;
+}
+
+.ocean-page--dark .tool-button:hover {
+  background: #263f52;
+}
+
+.ocean-page--dark .tool-button--active {
+  background: #174e58;
+}
+
+.ocean-page--dark .tool-button small,
+.ocean-page--dark .current-key p {
+  color: #9ab1ba;
+}
+
+.ocean-page--dark .current-key {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.ocean-page--dark .source-button {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #d4e6ea;
+  background: rgba(24, 38, 53, 0.94);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28);
+}
+
+.ocean-page--dark .guide-bubble--speech::after {
+  border-color: rgba(22, 167, 124, 0.35);
+  background: #182635;
+}
+
+.ocean-page--dark .mapboxgl-ctrl-group {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: #182635;
+}
+
+.ocean-page--dark .mapboxgl-ctrl-group button {
+  filter: invert(0.85);
+}
+
+.ocean-page--dark .help-dialog {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #182635;
+  color: #e8f2f4;
+}
+
+.ocean-page--dark .help-dialog h2,
+.ocean-page--dark .help-dialog > p,
+.ocean-page--dark .goal-list p {
+  color: #d4e6ea;
+}
+
+.ocean-page--dark .goal-list article {
+  background: #213b4c;
+}
+
+.ocean-page--dark .help-close {
+  color: #e8f2f4;
+  background: #29485a;
+}
+
 @media (max-width: 900px) {
   .topbar {
     right: 10px;
@@ -833,6 +936,11 @@ input:focus-visible {
   }
 
   .mapboxgl-ctrl-top-right {
+    top: 10px;
+    right: 60px;
+  }
+
+  .theme-toggle {
     top: 10px;
     right: 10px;
   }

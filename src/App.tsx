@@ -7,11 +7,13 @@ import {
   CircleHelp,
   Eraser,
   Info,
+  Moon,
   X,
   Pause,
   Play,
   RotateCcw,
   Sparkles,
+  Sun,
   Trash2,
   Waves,
 } from "lucide-react";
@@ -98,6 +100,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   const [narrationLineIndex, setNarrationLineIndex] = useState(0);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isDataOpen, setIsDataOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationRun, setSimulationRun] = useState<SimulateResponse | null>(null);
   const [simulationError, setSimulationError] = useState<string | null>(null);
@@ -397,7 +400,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   };
 
   return (
-    <main className="ocean-page">
+    <main className={`ocean-page ${isDarkMode ? "ocean-page--dark" : ""}`}>
       <OceanMap
         tool={tool}
         placements={placements}
@@ -412,6 +415,17 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       />
 
       <div className="map-overlay">
+        <motion.button
+          className="theme-toggle"
+          type="button"
+          aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+          aria-pressed={isDarkMode}
+          onClick={() => setIsDarkMode((current) => !current)}
+          whileHover={{ scale: 1.06 }}
+          whileTap={{ scale: 0.94 }}
+        >
+          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+        </motion.button>
         <motion.header className="topbar" initial={{ opacity: 0, y: -24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}>
           <motion.a className="brand" href="#top" aria-label="LitterVoyage home" whileHover={{ y: -2 }}>
             <span className="brand-mark"><Waves size={27} /></span>
