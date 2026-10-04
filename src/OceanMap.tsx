@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import circle from "@turf/circle";
 import { featureCollection, point } from "@turf/helpers";
 import mapboxgl, { type GeoJSONSource, type MapMouseEvent } from "mapbox-gl";
-import { AlertCircle, KeyRound } from "lucide-react";
+import { AlertCircle, KeyRound, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { registerMapSprites } from "./mapSprites";
 import {
+  impactEventsBetween,
   particleGeoJson,
   trailGeoJson,
 } from "./simulation";
+import type { ImpactEvent } from "./simulation";
 import type { ParticleFrame, ParticleTrajectory, Placement, Tool } from "./types";
 
 interface OceanMapProps {
@@ -178,6 +181,10 @@ export function OceanMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [mapError, setMapError] = useState(false);
+  const [impacts, setImpacts] = useState<ImpactEvent[]>([]);
+  const [, setViewportVersion] = useState(0);
+  const previousTimeRef = useRef(timeSeconds);
+  const prefersReducedMotion = useReducedMotion();
   const toolRef = useRef(tool);
   const onPlaceRef = useRef(onPlace);
   const onRemoveRef = useRef(onRemove);
@@ -292,6 +299,7 @@ export function OceanMap({
     map.on("style.load", handleStyleLoad);
     map.on("click", handleClick);
     map.on("mousemove", handleMouseMove);
+    map.on("move", () => setViewportVersion((version) => version + 1));
 
     return () => {
       if (mapRef.current === map) {
@@ -300,6 +308,19 @@ export function OceanMap({
       }
     };
   }, []);
+
+  useEffect(() => {
+    const previousTime = previousTimeRef.current;
+    const nextImpacts = impactEventsBetween(trajectories, previousTime, timeSeconds);
+    previousTimeRef.current = timeSeconds;
+    if (timeSeconds < previousTime) {
+      setImpacts([]);
+      return;
+    }
+    if (nextImpacts.length) {
+      setImpacts((current) => [...current, ...nextImpacts]);
+    }
+  }, [timeSeconds, trajectories]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -337,5 +358,44 @@ export function OceanMap({
     );
   }
 
-  return <div ref={containerRef} className="map-container" aria-label="Interactive LitterVoyage ocean map" />;
+  return (
+    <>
+      <div ref={containerRef} className="map-container" aria-label="Interactive LitterVoyage ocean map" />
+      <div className="impact-overlay" aria-live="polite">
+        <AnimatePresence>
+          {impacts.map((impact) => {
+            const pixel = mapRef.current?.project(impact.coordinates);
+            if (!pixel) return null;
+            const key = `${impact.id}-${impact.timeSeconds}-${impact.type}`;
+            return (
+              <div
+                className="impact-position"
+                key={key}
+                style={{ left: pixel.x, top: pixel.y }}
+              >
+                <motion.div
+                  className={`impact-x impact-x--${impact.type}`}
+                  role="status"
+                  aria-label={`${impact.type === "beached" ? "Land impact" : "Collector impact"} for ${impact.id}`}
+                  initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.25, y: 10 }}
+                  animate={prefersReducedMotion
+                    ? { opacity: [0, 1, 1, 0] }
+                    : {
+                        opacity: [0, 1, 1, 1, 0],
+                        scale: [0.25, 1.32, 0.92, 1, 1],
+                        y: [10, -10, -14, -18, -28],
+                        rotate: [-18, 12, -6, 0, 0],
+                      }}
+                  transition={{ duration: prefersReducedMotion ? 0.6 : 1.25, times: prefersReducedMotion ? [0, 0.2, 0.75, 1] : [0, 0.18, 0.38, 0.72, 1], ease: "easeOut" }}
+                  onAnimationComplete={() => setImpacts((current) => current.filter((item) => `${item.id}-${item.timeSeconds}-${item.type}` !== key))}
+                >
+                  <X aria-hidden="true" strokeWidth={4.5} />
+                </motion.div>
+              </div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+    </>
+  );
 }

@@ -105,17 +105,31 @@ def drift_item(
             next_t = min(next_t, activation_times[0])
         step_seconds = next_t - t
         previous_status = status
+        transition_recorded = False
         if status == "floating":
             u, v = fld.sample(lon, lat, t)
-            lat += factor * v * step_seconds / M_PER_DEG_LAT
-            lon += factor * u * step_seconds / m_per_deg_lon(lat)
-            status, captured_by = _check(lon, lat, next_t, fld, collectors)
-            if status != "floating":
+            next_lat = lat + factor * v * step_seconds / M_PER_DEG_LAT
+            next_lon = lon + factor * u * step_seconds / m_per_deg_lon(next_lat)
+            land_contact = fld.first_land_contact(lon, lat, next_lon, next_lat, t, next_t)
+            if land_contact is not None:
+                lon, lat, contact_fraction = land_contact
+                status, captured_by = "beached", None
+                changed_at = min(next_t, int(t + max(1, round(step_seconds * contact_fraction))))
+                samples.append((changed_at, round(lon, 5), round(lat, 5), status))
+                transition_recorded = True
+            else:
+                lon, lat = next_lon, next_lat
+                status, captured_by = _check(lon, lat, next_t, fld, collectors)
+            if status != "floating" and changed_at is None:
                 changed_at = next_t
         t = next_t
         if activation_times and activation_times[0] == t:
             activation_times.pop(0)
-        if t % frame_interval == 0 or t == total or status != previous_status:
+        if (
+            t % frame_interval == 0
+            or t == total
+            or (status != previous_status and not transition_recorded)
+        ):
             samples.append((t, round(lon, 5), round(lat, 5), status))
 
     return ItemOutcome(item.id, item.type, status, captured_by, changed_at, samples)

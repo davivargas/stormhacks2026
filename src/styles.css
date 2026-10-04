@@ -62,6 +62,41 @@ input:focus-visible {
   pointer-events: auto;
 }
 
+.impact-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.impact-position {
+  position: absolute;
+  transform: translate(-50%, -100%);
+}
+
+.impact-x {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  place-items: center;
+  color: #fff;
+  border: 5px solid #fff;
+  border-radius: 50%;
+  background: #e64747;
+  box-shadow: 0 5px 0 #173b50, 0 9px 24px rgba(23, 59, 80, 0.42);
+}
+
+.impact-x--captured {
+  background: #f0953c;
+}
+
+.impact-x svg {
+  width: 48px;
+  height: 48px;
+  filter: drop-shadow(0 2px 0 rgba(23, 59, 80, 0.35));
+}
+
 .mapboxgl-map {
   font-family: "Nunito", sans-serif;
 }

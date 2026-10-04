@@ -8,7 +8,7 @@ import {
   SIMULATION_DURATION_DAYS,
   timelineTimeToAudio,
 } from "./timeline";
-import { interpolateFrame, trailGeoJson } from "./simulation";
+import { impactEventsBetween, interpolateFrame, trailGeoJson } from "./simulation";
 import { requestSimulation } from "./simulationApi";
 import type { ParticleTrajectory } from "./types";
 
@@ -42,6 +42,14 @@ describe("ten-day timeline", () => {
     expect(interpolateFrame([trajectory], 259200)[0].coordinates).toEqual([-130, 40]);
     expect(interpolateFrame([trajectory], 900000)[0].coordinates).toEqual([-129.9, 40]);
     expect(interpolateFrame([trajectory], 260000)[0].status).toBe("beached");
+    expect(impactEventsBetween([trajectory], 259999, 260000)).toEqual([{
+      id: "late",
+      type: "beached",
+      timeSeconds: 260000,
+      coordinates: [-129.9, 40],
+    }]);
+    expect(impactEventsBetween([trajectory], 260000, 300000)).toEqual([]);
+    expect(impactEventsBetween([trajectory], 300000, 259200)).toEqual([]);
   });
 
   it("clamps a floating trajectory at its endpoint instead of extrapolating", () => {
