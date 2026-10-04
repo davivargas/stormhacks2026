@@ -389,7 +389,7 @@ input:focus-visible {
 
 .tool-grid {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tool-button {
@@ -397,8 +397,8 @@ input:focus-visible {
   align-items: center;
   gap: 9px;
   width: 100%;
-  min-height: 50px;
-  padding: 7px 9px;
+  min-height: 42px;
+  padding: 3px 9px;
   border: 2px solid transparent;
   border-radius: 17px;
   background: transparent;
