@@ -491,7 +491,7 @@ input:focus-visible {
 
 .guide-bubble {
   position: absolute;
-  right: 20px;
+  left: 18px;
   bottom: 184px;
   display: flex;
   align-items: center;
@@ -512,7 +512,7 @@ input:focus-visible {
 }
 
 .guide-bubble--talking {
-  max-width: min(520px, calc(100vw - 340px));
+  max-width: min(520px, calc(100vw - 300px));
 }
 
 .mascot {
@@ -733,7 +733,7 @@ input:focus-visible {
   }
 
   .guide-bubble {
-    right: 12px;
+    left: 12px;
     bottom: 206px;
     max-width: 260px;
   }
