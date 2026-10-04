@@ -212,13 +212,19 @@ class DeterministicStoryGenerator:
             f"{event_sentence} {outcomes[summary.final_status]} "
         )
         assumptions = " ".join(summary.assumptions).lower()
+        optional_clauses = []
         if "current" in assumptions:
-            script += "This possible path follows ocean currents. "
+            optional_clauses.append("This possible path follows ocean currents.")
         if "wind" in assumptions and "wave" in assumptions:
-            script += "Wind and waves stay out of this adventure. "
+            optional_clauses.append("Wind and waves stay out of this adventure.")
         if "sink" in assumptions or "break down" in assumptions:
-            script += f"{character} does not sink or break down here. "
-        script += "Help keep real ocean journeys clean by putting litter in the right bin."
+            optional_clauses.append(f"{character} does not sink or break down here.")
+        closing = "Help keep real ocean journeys clean by putting litter in the right bin."
+        for clause in optional_clauses:
+            candidate = f"{script}{clause} {closing}"
+            if story_word_count(candidate) <= 80:
+                script += f"{clause} "
+        script += closing
 
         if story_word_count(script) < 50:
             script += " Every piece placed safely in a bin is one less ocean traveler."

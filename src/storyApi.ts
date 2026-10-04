@@ -53,7 +53,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `PlasticPaths API request failed (${response.status})`);
+    throw new Error(body?.detail ?? `LitterVoyage API request failed (${response.status})`);
   }
   return response.json() as Promise<T>;
 }

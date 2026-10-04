@@ -1,4 +1,4 @@
-# PlasticPaths
+# LitterVoyage
 
 A kid-friendly ocean litter simulation built with React, TypeScript, Vite, Mapbox GL JS, and Mapbox Studio.
 
@@ -14,7 +14,7 @@ Add a Mapbox public token and your published Studio style URL to `.env.local`. W
 
 ## Mapbox Studio style
 
-Create a style based on Mapbox Standard and configure it for the PlasticPaths visual language:
+Create a style based on Mapbox Standard and configure it for the LitterVoyage visual language:
 
 - Water: `#73DDE5`
 - Land: `#B7E88A`

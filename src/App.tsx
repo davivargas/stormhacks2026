@@ -4,7 +4,6 @@ import {
   Anchor,
   Backpack,
   CupSoda,
-  ChevronRight,
   CircleHelp,
   Eraser,
   Info,
@@ -200,7 +199,7 @@ function App() {
     } catch {
       setIsPlaying(false);
       setIsNarrating(false);
-      setMessage("Finn's story is ready. Press Play once more to hear it!");
+      setMessage("Shelly's story is ready. Press Play once more to hear it!");
     }
   };
 
@@ -225,7 +224,7 @@ function App() {
     const requestId = playbackRequestRef.current + 1;
     playbackRequestRef.current = requestId;
     setIsPreparingNarration(true);
-    setMessage("Finn is getting your ocean story ready...");
+    setMessage("Shelly is getting your ocean story ready...");
 
     try {
       const story = await requestOceanStory(storySummary);
@@ -248,7 +247,7 @@ function App() {
       audio.onerror = () => {
         setIsNarrating(false);
         setIsPlaying(false);
-        setMessage("Finn could not play the narration. Please try again.");
+        setMessage("Shelly could not play the narration. Please try again.");
       };
       audio.ontimeupdate = () => {
         if (Number.isFinite(audio.duration) && audio.duration > 0) {
@@ -318,36 +317,31 @@ function App() {
       />
 
       <div className="map-overlay">
-        <motion.header className="topbar" initial={{ opacity: 0, y: -24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }}>
-          <motion.a className="brand" href="#top" aria-label="PlasticPaths home" whileHover={{ y: -2 }}>
+        <motion.header className="topbar" initial={{ opacity: 0, y: -24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}>
+          <motion.a className="brand" href="#top" aria-label="LitterVoyage home" whileHover={{ y: -2 }}>
             <span className="brand-mark"><Waves size={27} /></span>
-            <span>Plastic<span>Paths</span></span>
+            <span>Litter<span>Voyage</span></span>
           </motion.a>
-          <nav className="journey" aria-label="Experiment progress">
-            <motion.span className="journey-step journey-step--done" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: "spring" }}>1</motion.span>
-            <span>Place</span><ChevronRight size={16} />
-            <motion.span className="journey-step" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, type: "spring" }}>2</motion.span>
-            <span>Predict</span><ChevronRight size={16} />
-            <motion.span className="journey-step" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4, type: "spring" }}>3</motion.span>
-            <span>Explore</span>
-          </nav>
           <motion.button className="icon-button" type="button" aria-label="Open help" whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}><CircleHelp size={22} /></motion.button>
         </motion.header>
 
-        <motion.aside className="tool-panel" aria-label="Map tools" initial={{ opacity: 0, x: -28 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.55, delay: 0.15 }}>
+        <motion.aside className="tool-panel" aria-label="Map tools" initial={{ opacity: 0, x: -28, scale: 0.96 }} animate={{ opacity: 1, x: 0, scale: 1 }} transition={{ duration: 0.55, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}>
           <div className="panel-heading">
             <span className="eyebrow">Choose a tool</span>
             <h1>Make a splash</h1>
           </div>
           <div className="tool-grid">
-            {tools.map(({ id, label, detail, icon: Icon }) => (
+            {tools.map(({ id, label, detail, icon: Icon }, index) => (
               <motion.button
                 className={`tool-button ${tool === id ? "tool-button--active" : ""}`}
                 key={id}
                 type="button"
                 aria-pressed={tool === id}
                 onClick={() => setTool(tool === id ? "explore" : id)}
-                whileHover={{ x: 5 }}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.28 + index * 0.06, type: "spring", stiffness: 420, damping: 26 }}
+                whileHover={{ x: 5, scale: 1.015 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <span className={`tool-icon tool-icon--${id}`}><Icon size={24} /></span>
@@ -359,14 +353,16 @@ function App() {
           <div className="current-key"><span>↗</span><p><strong>Ocean current</strong>Arrows show water direction</p></div>
         </motion.aside>
 
-        <motion.section className={`guide-bubble ${isNarrating ? "guide-bubble--talking" : ""}`} aria-live="polite" initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.35 }}>
+        <motion.section className={`guide-bubble ${isNarrating ? "guide-bubble--talking" : ""}`} aria-live="polite" initial={{ opacity: 0, y: 22, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.5, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}>
           <motion.div
             className={`mascot ${isNarrating ? "mascot--talking" : ""}`}
             aria-hidden="true"
-            animate={isNarrating ? { y: [0, -3, 0], rotate: [-2, 2, -2], scale: [1, 1.04, 1] } : { y: [0, -4, 0], rotate: 0, scale: 1 }}
-            transition={{ duration: isNarrating ? 0.42 : 3, repeat: Infinity, ease: "easeInOut" }}
-          ><span>•</span><span>•</span><b>⌣</b></motion.div>
-          <div><span className="eyebrow">{isNarrating ? "Finn is talking" : "Finn says"}</span><AnimatePresence mode="wait"><motion.p key={message} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>{message}</motion.p></AnimatePresence></div>
+            animate={isNarrating ? { y: [0, -4, 0], rotate: [-3, 3, -3], scale: [1, 1.06, 1] } : { y: [0, -5, 0], rotate: [-1, 1, -1], scale: 1 }}
+            transition={{ duration: isNarrating ? 0.42 : 3.2, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <img className="cartoon-turtle" src="/shelly-turtle.png" alt="Shelly the cartoon turtle" />
+          </motion.div>
+          <div><span className="eyebrow">{isNarrating ? "Shelly is talking" : "Shelly says"}</span><AnimatePresence mode="wait"><motion.p key={message} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>{message}</motion.p></AnimatePresence></div>
         </motion.section>
 
         <motion.section className="bottom-dock" aria-label="Simulation controls" initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}>

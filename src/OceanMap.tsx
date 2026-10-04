@@ -385,5 +385,5 @@ export function OceanMap({
     );
   }
 
-  return <div ref={containerRef} className="map-container" aria-label="Interactive PlasticPaths ocean map" />;
+  return <div ref={containerRef} className="map-container" aria-label="Interactive LitterVoyage ocean map" />;
 }
