@@ -111,6 +111,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   const [isNarrating, setIsNarrating] = useState(false);
   const [isPreparingNarration, setIsPreparingNarration] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isDataOpen, setIsDataOpen] = useState(false);
   const [message, setMessage] = useState("Choose a litter type, then click the ocean to place it.");
   const lastFrameRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -174,13 +175,16 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   }, []);
 
   useEffect(() => {
-    if (!isHelpOpen) return;
+    if (!isHelpOpen && !isDataOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsHelpOpen(false);
+      if (event.key === "Escape") {
+        setIsHelpOpen(false);
+        setIsDataOpen(false);
+      }
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [isHelpOpen]);
+  }, [isHelpOpen, isDataOpen]);
 
   useEffect(() => {
     if (trajectories.some(({ id }) => id === selectedParticleId)) return;
@@ -431,7 +435,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
           </div>
         </motion.section>
 
-        <motion.button className="source-button" type="button" whileHover={{ y: -3 }} whileTap={{ scale: 0.96 }}><Info size={15} /> Data & assumptions</motion.button>
+        <motion.button className="source-button" type="button" aria-label="Open data and assumptions" aria-expanded={isDataOpen} onClick={() => setIsDataOpen(true)} whileHover={{ y: -3 }} whileTap={{ scale: 0.96 }}><Info size={15} /> Data & assumptions</motion.button>
       </div>
 
       <AnimatePresence>
@@ -490,6 +494,63 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
           </motion.section>
         </motion.div>
       )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isDataOpen && (
+          <motion.div
+            className="help-backdrop"
+            role="presentation"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.25 }}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setIsDataOpen(false);
+            }}
+          >
+            <motion.section
+              className="help-dialog data-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="data-title"
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 12 }}
+              animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: 8 }}
+              transition={prefersReducedMotion ? { duration: 0 } : { type: "spring", stiffness: 360, damping: 28 }}
+            >
+              <button className="help-close" type="button" aria-label="Close data and assumptions" onClick={() => setIsDataOpen(false)}>
+                <X size={20} />
+              </button>
+              <span className="eyebrow">How the simulation works</span>
+              <h2 id="data-title">Data & assumptions</h2>
+              <p>LitterVoyage is an educational model that helps you explore how litter can move through an ocean environment and how cleanup can change its journey.</p>
+              <div className="goal-list">
+                <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
+                  <strong>What the map shows</strong>
+                  <p>Place a bottle, bag, or foam item on the water. The map displays its marker, simulated trail, current direction, and any cleanup area you add.</p>
+                </motion.article>
+                <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
+                  <strong>How the local model works</strong>
+                  <p>The current frontend uses predefined current-like paths over a 24-hour timeline. Positions are sampled every two hours, and placement time determines when each item begins moving.</p>
+                </motion.article>
+                <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
+                  <strong>Statuses and cleanup</strong>
+                  <p>Litter may remain floating, become beached, move outside the modeled area, or be captured. Cleanup zones use a 7 km radius, and the comparison controls show outcomes with or without cleanup.</p>
+                </motion.article>
+                <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
+                  <strong>Model assumptions</strong>
+                  <p>The educational story considers ocean currents only. Wind and waves are excluded, and plastic does not sink or break down during the simulation.</p>
+                </motion.article>
+                <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
+                  <strong>Data sources and limitations</strong>
+                  <p>The project backend supports Copernicus Marine currents, synthetic fallback currents, caching, and persistence. The current visible UI primarily uses its local deterministic model, so this is not a live forecast or a precise prediction of real-world drift.</p>
+                </motion.article>
+              </div>
+              <p className="help-footer">Use the simulation to build intuition, compare choices, and learn why preventing litter at its source matters.</p>
+            </motion.section>
+          </motion.div>
+        )}
       </AnimatePresence>
     </main>
   );
