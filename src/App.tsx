@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Anchor,
   Backpack,
@@ -32,6 +32,18 @@ const tools: Array<{ id: Tool; label: string; detail: string; icon: typeof CupSo
   { id: "collector", label: "Cleanup", detail: "Catch litter", icon: Anchor },
   { id: "remove", label: "Remove", detail: "Pick an item", icon: Eraser },
 ];
+
+const goalListVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.1, delayChildren: 0.18 },
+  },
+};
+
+const goalCardVariants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0 },
+};
 
 function formatTime(seconds: number) {
   const hours = Math.floor(seconds / 3600);
@@ -87,6 +99,7 @@ function buildStorySummary(
 }
 
 function App() {
+  const prefersReducedMotion = useReducedMotion();
   const [placements, setPlacements] = useState<Placement[]>(INITIAL_PLACEMENTS);
   const [selectedParticleId, setSelectedParticleId] = useState<string | null>(
 INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
@@ -421,18 +434,28 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
         <motion.button className="source-button" type="button" whileHover={{ y: -3 }} whileTap={{ scale: 0.96 }}><Info size={15} /> Data & assumptions</motion.button>
       </div>
 
+      <AnimatePresence>
       {isHelpOpen && (
-        <div className="help-backdrop" role="presentation" onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setIsHelpOpen(false);
-        }}>
+        <motion.div
+          className="help-backdrop"
+          role="presentation"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: prefersReducedMotion ? 0 : 0.25 }}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setIsHelpOpen(false);
+          }}
+        >
           <motion.section
             className="help-dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="help-title"
-            initial={{ opacity: 0, scale: 0.94, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 360, damping: 28 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 12 }}
+            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: 8 }}
+            transition={prefersReducedMotion ? { duration: 0 } : { type: "spring", stiffness: 360, damping: 28 }}
           >
             <button className="help-close" type="button" aria-label="Close help" onClick={() => setIsHelpOpen(false)}>
               <X size={20} />
@@ -440,28 +463,34 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
             <span className="eyebrow">About LitterVoyage</span>
             <h2 id="help-title">Explore how litter reaches the sea</h2>
             <p>LitterVoyage turns an everyday piece of litter into an interactive ocean journey. Place it on the map, follow the currents, and compare what happens when cleanup is added.</p>
-            <div className="goal-list">
-              <article>
+            <motion.div
+              className="goal-list"
+              variants={prefersReducedMotion ? undefined : goalListVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants} whileHover={prefersReducedMotion ? undefined : { y: -4, scale: 1.015 }}>
                 <strong>SDG 14 · Life Below Water</strong>
                 <p>Shows how plastic pollution can move through marine environments and why preventing litter at its source matters.</p>
-              </article>
-              <article>
+              </motion.article>
+              <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants} whileHover={prefersReducedMotion ? undefined : { y: -4, scale: 1.015 }}>
                 <strong>SDG 12 · Responsible Consumption and Production</strong>
                 <p>Connects individual choices, waste disposal, and the path litter can take when it is not managed responsibly.</p>
-              </article>
-              <article>
+              </motion.article>
+              <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants} whileHover={prefersReducedMotion ? undefined : { y: -4, scale: 1.015 }}>
                 <strong>SDG 6 · Clean Water and Sanitation</strong>
                 <p>Highlights the shared responsibility to keep waterways clean and reduce pollution before it spreads.</p>
-              </article>
-              <article>
+              </motion.article>
+              <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants} whileHover={prefersReducedMotion ? undefined : { y: -4, scale: 1.015 }}>
                 <strong>SDG 17 · Partnerships for the Goals</strong>
                 <p>Invites people to learn, experiment, and work together on practical solutions for healthier oceans.</p>
-              </article>
-            </div>
+              </motion.article>
+            </motion.div>
             <p className="help-footer">Small actions add up. Use the map to learn, then help keep litter out of the water.</p>
           </motion.section>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </main>
   );
 }
