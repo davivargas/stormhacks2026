@@ -628,6 +628,189 @@ input:focus-visible {
     display: none;
   }
 
+  /* Card layout for the educational map workspace. */
+  .ocean-page {
+    min-height: 100vh;
+    height: auto;
+    overflow: visible;
+    padding: 24px 0 42px;
+    background:
+      radial-gradient(circle at 85% 0%, rgba(84, 206, 215, 0.35), transparent 32%),
+      #54ced7;
+  }
+
+  .page-content {
+    width: min(1180px, calc(100% - 40px));
+    margin: 0 auto;
+  }
+
+  .page-content > .topbar {
+    position: relative;
+    inset: auto;
+    margin-bottom: 28px;
+  }
+
+  .explorer-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.75fr);
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  .live-map-card {
+    min-width: 0;
+    overflow: hidden;
+    border: 2px solid rgba(23, 59, 80, 0.1);
+    border-radius: 25px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 7px 0 rgba(23, 59, 80, 0.13);
+  }
+
+  .map-toolbar,
+  .map-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 17px;
+  }
+
+  .map-toolbar {
+    color: #527183;
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+
+  .map-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #173b50;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #16a77c;
+  }
+
+  .map-hint {
+    color: #78909c;
+    font-size: 0.66rem;
+  }
+
+  .live-map-stage {
+    position: relative;
+    height: clamp(380px, 48vw, 570px);
+    overflow: hidden;
+    background: #bfe9eb;
+  }
+
+  .live-map-stage .map-container,
+  .live-map-stage .map-fallback {
+    position: absolute;
+    inset: 0;
+  }
+
+  .live-map-stage .mapboxgl-ctrl-top-right {
+    top: 14px;
+    right: 14px;
+  }
+
+  .map-footer {
+    color: #78909c;
+    font-size: 0.7rem;
+  }
+
+  .map-footer strong {
+    color: #173b50;
+  }
+
+  .explorer-grid > .tool-panel {
+    position: relative;
+    inset: auto;
+    width: auto;
+    height: fit-content;
+  }
+
+  .learn-row {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.4fr);
+    gap: 20px;
+    align-items: center;
+    margin-top: 20px;
+  }
+
+  .learn-row .guide-bubble,
+  .learn-row .bottom-dock {
+    position: relative;
+    inset: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    max-width: none;
+  }
+
+  .learn-row .guide-bubble {
+    min-height: 94px;
+  }
+
+  .learn-row .bottom-dock {
+    width: 100%;
+  }
+
+  .learn-row .status-row {
+    margin-bottom: 9px;
+  }
+
+  .source-button {
+    position: relative;
+    inset: auto;
+    margin-top: 18px;
+  }
+
+  @media (max-width: 900px) {
+    .ocean-page {
+      padding: 14px 0 24px;
+    }
+
+    .page-content {
+      width: min(100% - 24px, 680px);
+    }
+
+    .page-content > .topbar {
+      margin-bottom: 14px;
+    }
+
+    .explorer-grid,
+    .learn-row {
+      grid-template-columns: 1fr;
+    }
+
+    .live-map-stage {
+      height: min(72vh, 520px);
+    }
+
+    .explorer-grid > .tool-panel {
+      display: block;
+    }
+
+    .learn-row .bottom-dock {
+      display: block;
+    }
+
+    .learn-row .status-row,
+    .learn-row .comparison-control,
+    .learn-row .reset-button {
+      display: none;
+    }
+
+    .source-button {
+      display: flex;
+    }
+  }
+
   .topbar {
     grid-template-columns: 1fr auto;
   }
@@ -700,6 +883,189 @@ input:focus-visible {
     top: 40%;
     left: 50%;
     width: min(86vw, 390px);
+  }
+}
+
+/* Card layout for the educational map workspace. */
+.ocean-page {
+  min-height: 100vh;
+  height: auto;
+  overflow: visible;
+  padding: 24px 0 42px;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(84, 206, 215, 0.35), transparent 32%),
+    #54ced7;
+}
+
+.page-content {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.page-content > .topbar {
+  position: relative;
+  inset: auto;
+  margin-bottom: 28px;
+}
+
+.explorer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.75fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.live-map-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 2px solid rgba(23, 59, 80, 0.1);
+  border-radius: 25px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 7px 0 rgba(23, 59, 80, 0.13);
+}
+
+.map-toolbar,
+.map-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 17px;
+}
+
+.map-toolbar {
+  color: #527183;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.map-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #173b50;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a77c;
+}
+
+.map-hint {
+  color: #78909c;
+  font-size: 0.66rem;
+}
+
+.live-map-stage {
+  position: relative;
+  height: clamp(380px, 48vw, 570px);
+  overflow: hidden;
+  background: #bfe9eb;
+}
+
+.live-map-stage .map-container,
+.live-map-stage .map-fallback {
+  position: absolute;
+  inset: 0;
+}
+
+.live-map-stage .mapboxgl-ctrl-top-right {
+  top: 14px;
+  right: 14px;
+}
+
+.map-footer {
+  color: #78909c;
+  font-size: 0.7rem;
+}
+
+.map-footer strong {
+  color: #173b50;
+}
+
+.explorer-grid > .tool-panel {
+  position: relative;
+  inset: auto;
+  width: auto;
+  height: fit-content;
+}
+
+.learn-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.4fr);
+  gap: 20px;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.learn-row .guide-bubble,
+.learn-row .bottom-dock {
+  position: relative;
+  inset: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  max-width: none;
+}
+
+.learn-row .guide-bubble {
+  min-height: 94px;
+}
+
+.learn-row .bottom-dock {
+  width: 100%;
+}
+
+.learn-row .status-row {
+  margin-bottom: 9px;
+}
+
+.source-button {
+  position: relative;
+  inset: auto;
+  margin-top: 18px;
+}
+
+@media (max-width: 900px) {
+  .ocean-page {
+    padding: 14px 0 24px;
+  }
+
+  .page-content {
+    width: min(100% - 24px, 680px);
+  }
+
+  .page-content > .topbar {
+    margin-bottom: 14px;
+  }
+
+  .explorer-grid,
+  .learn-row {
+    grid-template-columns: 1fr;
+  }
+
+  .live-map-stage {
+    height: min(72vh, 520px);
+  }
+
+  .explorer-grid > .tool-panel {
+    display: block;
+  }
+
+  .learn-row .bottom-dock {
+    display: block;
+  }
+
+  .learn-row .status-row,
+  .learn-row .comparison-control,
+  .learn-row .reset-button {
+    display: none;
+  }
+
+  .source-button {
+    display: flex;
   }
 }
 
