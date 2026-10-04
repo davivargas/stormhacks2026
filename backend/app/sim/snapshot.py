@@ -207,7 +207,6 @@ def synthetic_field(
     return Field(key=key, source="synthetic", lon=lon, lat=lat, times=np.array([0.0]), components=components)
 
 
-_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 # The dataset calls Stokes drift vsdx / vsdy; the rest of the code uses ustokes / vstokes.
 _DATASET_NAMES = {"ustokes": "vsdx", "vstokes": "vsdy"}
@@ -250,22 +249,58 @@ def field_from_dataset(ds, key: SnapshotKey) -> Field:
     return Field(key=key, source="copernicus", lon=lon, lat=lat, times=np.array([0.0]), components=components)
 
 
-def fetch_copernicus(key: SnapshotKey) -> Field:
-    """Download one box of hourly surface currents. Credentials come from the environment."""
+# The remote dataset is opened once and kept. Opening it on every fetch cost 14-88 s; slicing a box
+# from an open handle costs 5-12 s whatever the box size (measured live).
+_dataset = None
+_dataset_opened_at = 0.0
+_dataset_lock = threading.Lock()
+
+
+def _open_dataset():
     import copernicusmarine  # lazy: slow import, and tests substitute it
 
-    west, south, east, north = fetch_bounds(key)
-    ds = copernicusmarine.open_dataset(
+    return copernicusmarine.open_dataset(
         dataset_id=config.COPERNICUS_DATASET_ID,
         variables=_DATASET_VARIABLES,
-        minimum_longitude=west,
-        maximum_longitude=east,
-        minimum_latitude=south,
-        maximum_latitude=north,
-        start_datetime=(key.slice_time - timedelta(hours=1)).strftime(_TIME_FORMAT),
-        end_datetime=(key.slice_time + timedelta(hours=1)).strftime(_TIME_FORMAT),
+        service="arco-geo-series",  # stored as one hour per block: the layout meant for maps
+        chunk_size_limit=0,  # keep the stored blocks; the default regroups them and a slice then takes minutes
     )
-    return field_from_dataset(ds, key)
+
+
+def _get_dataset():
+    """The open dataset handle, opened on first use and reopened when it is old."""
+    global _dataset, _dataset_opened_at
+    with _dataset_lock:
+        if _dataset is None or time.monotonic() - _dataset_opened_at >= config.COPERNICUS_REOPEN_S:
+            _dataset = _open_dataset()
+            _dataset_opened_at = time.monotonic()
+        return _dataset
+
+
+def _drop_dataset() -> None:
+    global _dataset
+    with _dataset_lock:
+        _dataset = None
+
+
+def fetch_copernicus(key: SnapshotKey) -> Field:
+    """Slice one box of hourly surface currents from the open dataset. Credentials come from the environment."""
+    west, south, east, north = fetch_bounds(key)
+    try:
+        box = _get_dataset().sel(longitude=slice(west, east), latitude=slice(south, north))
+        return field_from_dataset(box, key)
+    except ValueError:
+        raise  # an empty box is about this box, not about the handle
+    except Exception:
+        _drop_dataset()  # the handle may be broken or expired: open a fresh one next time
+        raise
+
+
+def warm_up() -> "concurrent.futures.Future | None":
+    """Open the dataset in the background at startup so the first request does not pay for it."""
+    if not _has_credentials():
+        return None
+    return _pool.submit(_get_dataset)
 
 
 # ---- in-process cache -------------------------------------------------------
@@ -375,7 +410,7 @@ def _fetch_with_timeout(key: SnapshotKey) -> Field | None:
 def _load_stored(key: SnapshotKey) -> Field | None:
     from app import db  # lazy: db imports this module
 
-    if not db.available():
+    if not _storable(key) or not db.available():
         return None
     try:
         return db.load_snapshot(key)
@@ -385,10 +420,16 @@ def _load_stored(key: SnapshotKey) -> Field | None:
         return None
 
 
+def _storable(key: SnapshotKey) -> bool:
+    """Whether a box is small enough to be worth caching in Tiger."""
+    side = int(round(2 * key.half_width_deg / config.GRID_RESOLUTION_DEG)) + 1
+    return side * side * key.n_slices <= config.SNAPSHOT_STORE_MAX_CELLS
+
+
 def _store(fld: Field) -> None:
     from app import db  # lazy: db imports this module
 
-    if not db.available():
+    if not _storable(fld.key) or not db.available():
         return
     try:
         db.save_snapshot(fld)

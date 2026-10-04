@@ -10,12 +10,14 @@ from fastapi.responses import JSONResponse
 
 from app import config, db
 from app.routes import ApiError, router
+from app.sim import snapshot
 from app.schemas import ErrorResponse
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.init_pool()  # returns False and carries on when Tiger is unreachable
+    snapshot.warm_up()  # open the Copernicus dataset in the background
     yield
     db.close_pool()
 

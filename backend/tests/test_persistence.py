@@ -197,3 +197,17 @@ def test_distinct_boxes_are_resolved_concurrently(monkeypatch):
     assert response.status_code == 200
     assert len(response.json()["snapshots"]) == 3
     assert elapsed < 0.75, f"boxes were fetched one after another ({elapsed:.2f}s)"
+
+
+def test_big_snapshots_are_not_stored_or_looked_up_in_tiger(fake_db, monkeypatch):
+    # A 25-degree box is ~360,000 rows: tens of MB and about a minute to upload, while refetching it
+    # from Copernicus takes seconds. Only boxes up to SNAPSHOT_STORE_MAX_CELLS go to Tiger.
+    from app import config
+
+    monkeypatch.setattr(config, "SNAPSHOT_STORE_MAX_CELLS", 100)  # KEY's box is 37 x 37 cells
+    fetched = real_field()
+    monkeypatch.setattr(snapshot, "fetch_copernicus", lambda key: fetched)
+    assert load_field(KEY) is fetched
+    snapshot._store_pool.submit(lambda: None).result()
+    assert fake_db["lookups"] == []
+    assert fake_db["snapshots"] == []

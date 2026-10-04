@@ -59,22 +59,82 @@ def test_field_from_dataset_rejects_an_empty_grid():
         field_from_dataset(fake_dataset(lon=(10.0,)), KEY)
 
 
-def test_fetch_requests_the_box_the_hour_and_the_dataset(monkeypatch):
-    calls = {}
+def wide_dataset() -> xr.Dataset:
+    """Stand-in for the whole remote dataset: one-degree grid, latitude ascending like the real one."""
+    times = np.array(["2026-10-03T17:00", "2026-10-03T18:00", "2026-10-03T19:00"], dtype="datetime64[ns]")
+    lat = np.arange(-30.0, -9.0)
+    lon = np.arange(0.0, 21.0)
+    data = {
+        name: (("time", "depth", "latitude", "longitude"), np.full((3, 1, lat.size, lon.size), 0.1, dtype="float32"))
+        for name in ("uo", "vo", "utide", "vtide", "vsdx", "vsdy")
+    }
+    return xr.Dataset(data, coords={"time": times, "depth": [0.49], "latitude": lat, "longitude": lon})
+
+
+def install_toolbox(monkeypatch, datasets):
+    """Replace the copernicusmarine module; each open_dataset call returns the next item of datasets."""
+    calls = []
+    remaining = list(datasets)
 
     def open_dataset(**kwargs):
-        calls.update(kwargs)
-        return fake_dataset()
+        calls.append(kwargs)
+        return remaining.pop(0)
 
     monkeypatch.setitem(sys.modules, "copernicusmarine", types.SimpleNamespace(open_dataset=open_dataset))
-    fld = real_fetch(KEY)
-    assert fld.source == "copernicus"
-    assert calls["dataset_id"] == config.COPERNICUS_DATASET_ID
-    assert calls["variables"] == ["uo", "vo", "utide", "vtide", "vsdx", "vsdy"]
-    assert (calls["minimum_longitude"], calls["maximum_longitude"]) == (8.5, 11.5)
-    assert (calls["minimum_latitude"], calls["maximum_latitude"]) == (-21.5, -18.5)
-    assert calls["start_datetime"] == "2026-10-03T17:00:00"
-    assert calls["end_datetime"] == "2026-10-03T19:00:00"
+    return calls
+
+
+def test_dataset_is_opened_once_and_each_box_is_sliced_from_it(monkeypatch):
+    # Measured live: opening per fetch cost 14-88 s; slicing an open handle costs 5-12 s at any box size.
+    calls = install_toolbox(monkeypatch, [wide_dataset()])
+    first = real_fetch(KEY)
+    second = real_fetch(make_key(14.2, -24.1, 1, T0))
+    assert len(calls) == 1
+    assert calls[0] == {
+        "dataset_id": config.COPERNICUS_DATASET_ID,
+        "variables": ["uo", "vo", "utide", "vtide", "vsdx", "vsdy"],
+        "service": "arco-geo-series",   # one hour per stored block: the layout for maps
+        "chunk_size_limit": 0,          # no regrouping into huge blocks; that made slices take minutes
+    }
+    assert first.source == "copernicus"
+    assert first.lon.tolist() == [9.0, 10.0, 11.0] and first.lat.tolist() == [-21.0, -20.0, -19.0]
+    assert second.lon.tolist() == [13.0, 14.0, 15.0] and second.lat.tolist() == [-25.0, -24.0, -23.0]
+
+
+def test_handle_is_reopened_after_a_failed_fetch(monkeypatch):
+    class Broken:
+        def sel(self, **kwargs):
+            raise RuntimeError("connection reset")
+
+    calls = install_toolbox(monkeypatch, [Broken(), wide_dataset()])
+    with pytest.raises(RuntimeError):
+        real_fetch(KEY)
+    assert real_fetch(KEY).source == "copernicus"
+    assert len(calls) == 2
+
+
+def test_handle_is_reopened_when_it_gets_old(monkeypatch):
+    # The remote time axis grows as new forecasts are published; an old handle would not see them.
+    monkeypatch.setattr(config, "COPERNICUS_REOPEN_S", 0)
+    calls = install_toolbox(monkeypatch, [wide_dataset(), wide_dataset()])
+    real_fetch(KEY)
+    real_fetch(KEY)
+    assert len(calls) == 2
+
+
+def test_warm_up_opens_the_dataset_in_the_background(monkeypatch):
+    calls = install_toolbox(monkeypatch, [wide_dataset()])
+    snapshot.warm_up().result(timeout=5)
+    assert len(calls) == 1
+    real_fetch(KEY)
+    assert len(calls) == 1  # the first request does not pay for the open
+
+
+def test_warm_up_does_nothing_without_credentials(monkeypatch):
+    monkeypatch.delenv("COPERNICUSMARINE_SERVICE_USERNAME", raising=False)
+    calls = install_toolbox(monkeypatch, [wide_dataset()])
+    assert snapshot.warm_up() is None
+    assert calls == []
 
 
 def test_fetch_box_is_clamped_at_the_antimeridian_and_pole():

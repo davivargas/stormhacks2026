@@ -9,13 +9,13 @@ T0 = datetime(2026, 10, 3, 18, tzinfo=UTC)
 
 
 def test_half_width_table():
-    # room for about 1 m/s (0.8 degrees a day), rounded up to half a degree, capped at 10
+    # room for about 1 m/s (0.8 degrees a day), rounded up to half a degree; the cap (25) is above 30 days
     assert config.half_width_deg(1) == 1.5
     assert config.half_width_deg(2) == 2.5
     assert config.half_width_deg(7) == 6.5
-    assert config.half_width_deg(11) == 9.5
-    assert config.half_width_deg(12) == 10.0
-    assert config.half_width_deg(30) == 10.0
+    assert config.half_width_deg(12) == 10.5
+    assert config.half_width_deg(25) == 20.5
+    assert config.half_width_deg(30) == 24.5
 
 
 def test_key_rounds_centre_to_half_degree():

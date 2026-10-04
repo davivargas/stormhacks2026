@@ -24,9 +24,12 @@ MAX_COLLECTORS = 20
 MAX_DISTINCT_BOXES = 8  # snapshot boxes (areas) one request may need
 
 # Snapshot box.
-# Measured fetch times: ~13 s fixed cost per fetch; 8 deg ~14 s, 12 deg 14-29 s, 16 deg 27-88 s.
-# 10 deg fetches measured 24 s and just over 30 s, so the budget below is 45 s.
-HALF_WIDTH_CAP_DEG = 10.0
+# Slicing a box from the open Copernicus handle takes 5-12 s at any size up to 25 deg (measured),
+# so the cap sits just above the 30-day formula value (24.5) and never cuts a box short.
+HALF_WIDTH_CAP_DEG = 25.0
+# Boxes with more cells than this are not cached in Tiger: a 25 deg box is ~360,000 rows (tens of MB,
+# about a minute to upload) while refetching it takes seconds. 60,000 covers boxes up to 10 deg.
+SNAPSHOT_STORE_MAX_CELLS = 60_000
 CACHE_KEEP_HOURS = 2  # in-memory snapshots older than this (by slice hour) are dropped
 CENTRE_ROUND_DEG = 0.5
 GRID_RESOLUTION_DEG = 1 / 12
@@ -41,7 +44,8 @@ DRIFT_FACTOR = {"bottle": 1.0, "bag": 1.0, "foam": 1.0}
 
 # Copernicus.
 COPERNICUS_DATASET_ID = "cmems_mod_glo_phy_anfc_merged-uv_PT1H-i"
-COPERNICUS_TIMEOUT_S = 45  # fetch time varies widely (measured 14-88 s); slower fetches are kept when they arrive
+COPERNICUS_TIMEOUT_S = 30  # a slice takes 5-12 s, plus ~8 s if the handle must be (re)opened
+COPERNICUS_REOPEN_S = 6 * 3600  # reopen the dataset handle this often to see newly published hours
 SYNTHETIC_RETRY_S = 60  # a fallback field is reused this long before Copernicus is tried again
 DATABASE_RETRY_S = 60  # after a database error the database is skipped this long
 

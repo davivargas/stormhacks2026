@@ -1,6 +1,6 @@
 -- Keep cached ocean currents from filling the Tiger free tier (750 MiB).
 --
--- A 10-degree snapshot (the largest) is about 58,000 rows (~7 MB before compression), and every new
+-- A 10-degree snapshot (the largest that is stored) is about 58,000 rows (~7 MB before compression), and every new
 -- area-hour stores one. Snapshots are keyed by the hour, so a snapshot from a past hour is
 -- never read again: dropping them after two days loses nothing the app uses.
 -- Runs (the positions table) are NOT affected.

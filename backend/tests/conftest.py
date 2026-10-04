@@ -21,6 +21,7 @@ def isolated(monkeypatch):
     monkeypatch.setattr(snapshot, "fetch_copernicus", refuse)
     monkeypatch.setattr(snapshot, "_copernicus_down_until", 0.0)
     monkeypatch.setattr(snapshot, "_credentials_warned", False)
+    monkeypatch.setattr(snapshot, "_dataset", None)  # no open Copernicus handle carried between tests
     monkeypatch.setattr(db, "_down_until", 0.0)
     snapshot._cache.clear()
     routes._runs.clear()
