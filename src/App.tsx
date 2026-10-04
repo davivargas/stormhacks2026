@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Eraser,
   Info,
+  Mic,
   Moon,
   X,
   Pause,
@@ -42,6 +43,7 @@ const tools: Array<{ id: Tool; label: string; detail: string; icon: typeof CupSo
   { id: "bag", label: "Bag", detail: "Place in water", icon: Backpack },
   { id: "foam", label: "Foam", detail: "Place in water", icon: Sparkles },
   { id: "collector", label: "Cleanup", detail: "Catch litter", icon: Anchor },
+  { id: "narrate", label: "Narrate", detail: "Pick a litter", icon: Mic },
   { id: "remove", label: "Remove", detail: "Pick an item", icon: Eraser },
 ];
 
@@ -343,7 +345,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   };
 
   const placeItem = (coordinates: Coordinates) => {
-    if (tool === "explore" || tool === "remove") return;
+    if (tool === "explore" || tool === "narrate" || tool === "remove") return;
     stopPlayback();
     const placedAtSeconds = placementTime(timeSeconds, durationSeconds);
     setTimeSeconds(placedAtSeconds);
@@ -362,6 +364,11 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     if (!trajectory) return;
     stopPlayback();
     setSelectedParticleId(id);
+    if (tool === "narrate") {
+      setTool("explore");
+      setMessage(`Shelly will tell this ${trajectory.type}'s story. Press play to hear it!`);
+      return;
+    }
     const item = simulationRun?.items.find(({ id: itemId }) => itemId === trajectory.id);
     const finalStatus = item ? ` It ends ${statusLabel(item.finalStatus)}.` : "";
     setMessage(`${trajectory.type[0].toUpperCase()}${trajectory.type.slice(1)} selected from the backend run.${finalStatus} Press play for its journey.`);
@@ -473,7 +480,6 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
               <span><strong>Reset all</strong><small>Clear the map</small></span>
             </motion.button>
           </div>
-          <div className="current-key"><span>↗</span><p><strong>Ocean current</strong>Arrows show water direction</p></div>
         </motion.aside>
 
         <motion.section className={`guide-bubble ${isNarrating ? "guide-bubble--talking guide-bubble--speech" : ""}`} aria-live="polite" initial={{ opacity: 0, y: 22, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.5, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}>

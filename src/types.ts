@@ -1,6 +1,6 @@
 export type LitterType = "bottle" | "bag" | "foam";
 export type PlacementType = LitterType | "collector";
-export type Tool = "explore" | PlacementType | "remove";
+export type Tool = "explore" | PlacementType | "narrate" | "remove";
 export type ParticleStatus = "floating" | "captured" | "beached" | "outside";
 export type ComparisonMode = "without" | "with";
 
