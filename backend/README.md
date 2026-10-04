@@ -47,6 +47,20 @@ all four statuses). Regenerate after changing `app/schemas.py`:
 
 With no credentials at all the server still runs: currents are synthetic (`"source": "synthetic"`, used immediately, with no wait for Copernicus) and runs are kept in memory (`"persisted": false`).
 
+## Storytelling and narration
+
+The same FastAPI app also serves the educational story flow:
+
+- `POST /api/stories` accepts a normalized simulation summary and returns a 50–80 word script.
+- `POST /api/stories/{story_id}/audio` creates or reuses ElevenLabs narration.
+- `GET /api/stories/{story_id}/audio/content` serves the generated audio file.
+
+With `RETRIEVAL_MODE=local`, facts come from the bundled educational passages. Without a Gemini key,
+the endpoint returns a deterministic fallback story. Audio returns `503` until both
+`ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` are configured. To use TiDB vector retrieval, apply
+`sql/schema.sql`, run `plasticpaths-seed-tidb`, and set `RETRIEVAL_MODE=tidb` with the Gemini and
+TiDB variables from `.env.example`.
+
 ## Frontend integration
 
 Set `VITE_API_BASE_URL=http://localhost:8000`, then replace `buildTrajectories()` in `src/simulation.ts`:

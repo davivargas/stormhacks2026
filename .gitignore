@@ -5,10 +5,11 @@ dist
 .env.local
 *.local
 *.log
+backend/.data/
 backend/.env
-
-# python backend
 backend/.venv/
 __pycache__/
+*.py[cod]
 *.egg-info/
 .pytest_cache/
+.ruff_cache/

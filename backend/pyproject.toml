@@ -1,7 +1,7 @@
 [project]
 name = "plasticpaths-backend"
 version = "0.1.0"
-description = "PlasticPaths stream 3: litter drift simulation and Tiger Data store"
+description = "PlasticPaths simulation, educational storytelling, and narration backend"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115",
@@ -11,10 +11,20 @@ dependencies = [
   "psycopg[binary,pool]>=3.2",
   "xarray>=2024.6",
   "copernicusmarine>=2.0",
+  "elevenlabs>=2.0",
+  "google-genai>=1.0",
+  "pydantic-settings>=2.7,<3",
+  "pymysql>=1.1,<2",
+  "sqlalchemy>=2.0,<3",
+  "tidb-vector>=0.0.11,<1",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "httpx>=0.27"]
+dev = ["pytest>=8", "httpx>=0.27", "pytest-asyncio>=0.25,<1"]
+test = ["pytest>=8", "httpx>=0.27", "pytest-asyncio>=0.25,<1"]
+
+[project.scripts]
+plasticpaths-seed-tidb = "app.seed:main"
 
 [build-system]
 requires = ["setuptools>=69"]
@@ -26,3 +36,8 @@ include = ["app*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
