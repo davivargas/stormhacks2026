@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import circle from "@turf/circle";
 import { featureCollection, point } from "@turf/helpers";
@@ -154,6 +154,7 @@ export function OceanMap({
 }: OceanMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const [mapError, setMapError] = useState(false);
   const toolRef = useRef(tool);
   const onPlaceRef = useRef(onPlace);
   const onRemoveRef = useRef(onRemove);
@@ -193,6 +194,13 @@ export function OceanMap({
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
 
+    const handleMapError = (event: mapboxgl.ErrorEvent) => {
+      if (event.error.message.toLowerCase().includes("access token")) {
+        map.remove();
+        mapRef.current = null;
+        setMapError(true);
+      }
+    };
     const handleStyleLoad = () => {
       const data = mapDataRef.current;
       addSimulationLayers(map, data.placements, data.frames, data.trajectories, data.timeSeconds);
@@ -216,6 +224,7 @@ export function OceanMap({
       onPlaceRef.current(coordinates);
     };
 
+    map.on("error", handleMapError);
     map.on("style.load", handleStyleLoad);
     map.on("click", handleClick);
 
@@ -238,7 +247,7 @@ export function OceanMap({
     updates.forEach(([id, data]) => (map.getSource(id) as GeoJSONSource | undefined)?.setData(data));
   }, [frames, placements, timeSeconds, trajectories]);
 
-  if (!token) {
+  if (!token || mapError) {
     return (
       <div className="map-fallback" aria-label="Decorative ocean map preview">
         <div className="fallback-island fallback-island--one" />
@@ -247,8 +256,12 @@ export function OceanMap({
         <div className="credential-card" role="status">
           <div className="credential-icon"><KeyRound size={22} /></div>
           <div>
-            <strong>Connect your Mapbox map</strong>
-            <span>Add a public token to <code>.env.local</code> to load the interactive Studio style.</span>
+            <strong>{mapError ? "Mapbox preview unavailable" : "Connect your Mapbox map"}</strong>
+            <span>
+              {mapError
+                ? "The Mapbox token was rejected, so you are viewing the built-in ocean preview."
+                : <>Add a public token to <code>.env.local</code> to load the interactive Studio style.</>}
+            </span>
           </div>
         </div>
         <div className="fallback-note"><AlertCircle size={16} /> Preview mode</div>
