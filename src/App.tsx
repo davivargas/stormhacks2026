@@ -88,15 +88,15 @@ function buildStorySummary(
 function App() {
   const [placements, setPlacements] = useState<Placement[]>(INITIAL_PLACEMENTS);
   const [selectedParticleId, setSelectedParticleId] = useState<string | null>(
-    INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
+INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   );
   const [tool, setTool] = useState<Tool>("explore");
   const [comparison, setComparison] = useState<ComparisonMode>("with");
-  const [timeSeconds, setTimeSeconds] = useState(6 * 3600);
+  const [timeSeconds, setTimeSeconds] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isNarrating, setIsNarrating] = useState(false);
   const [isPreparingNarration, setIsPreparingNarration] = useState(false);
-  const [message, setMessage] = useState("Bottle selected! Click any litter, then press play for its story.");
+  const [message, setMessage] = useState("Choose a litter type, then click the ocean to place it.");
   const lastFrameRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const narrationSignatureRef = useRef<string | null>(null);
@@ -296,9 +296,7 @@ function App() {
     stopPlayback();
     if (audioRef.current) audioRef.current.currentTime = 0;
     setTimeSeconds(0);
-    setPlacements(INITIAL_PLACEMENTS);
-    setSelectedParticleId(INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null);
-    setMessage("Bottle selected! Click any litter, then press play for its story.");
+    setMessage("Choose a litter type, then click the ocean to place it.");
   };
 
   return (
