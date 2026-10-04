@@ -6,7 +6,7 @@ JSON is camelCase to match src/types.ts; Python attributes stay snake_case.
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
 
 from app import config
@@ -29,6 +29,7 @@ class Placement(ApiModel):
     id: str = Field(min_length=1, max_length=64)
     type: PlacementType
     coordinates: Coordinates
+    placed_at_seconds: int = Field(default=0, ge=0)
 
     @field_validator("coordinates")
     @classmethod
@@ -36,6 +37,13 @@ class Placement(ApiModel):
         lon, lat = value
         if not (-180.0 <= lon <= 180.0 and -90.0 <= lat <= 90.0):
             raise ValueError("coordinates must be [lon, lat] within [-180, 180] and [-90, 90]")
+        return value
+
+    @field_validator("placed_at_seconds", mode="before")
+    @classmethod
+    def _whole_seconds(cls, value):
+        if isinstance(value, bool):
+            raise ValueError("placement time must be a whole number of seconds")
         return value
 
 
@@ -63,6 +71,14 @@ class SimulateRequest(ApiModel):
         if len(ids) != len(set(ids)):
             raise ValueError("placement ids must be unique")
         return value
+
+    @model_validator(mode="after")
+    def _placement_times_within_run(self):
+        total_seconds = self.duration_days * 24 * 3600
+        for placement in self.placements:
+            if placement.placed_at_seconds > total_seconds:
+                raise ValueError(f"{placement.id}: placement time exceeds the experiment duration")
+        return self
 
 
 # ---- simulate response ------------------------------------------------------
@@ -180,6 +196,8 @@ class MetaDefaults(ApiModel):
     sample_interval_seconds: int
     integration_step_seconds: int
     max_litter_placements: int
+    max_collectors: int = config.MAX_COLLECTORS
+    max_distinct_areas: int = config.MAX_DISTINCT_BOXES
 
 
 class MetaResponse(ApiModel):

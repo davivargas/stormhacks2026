@@ -171,7 +171,9 @@ def timeline_buckets(start_time: datetime, rows) -> list[TimelineBucket]:
     folded: dict[int, dict] = {}
     for bucket, status, count in rows:
         seconds = int((bucket - start_time).total_seconds())
-        folded.setdefault(seconds, dict.fromkeys(STATUSES, 0))[status] = count
+        counts = folded.setdefault(seconds, dict.fromkeys(STATUSES, 0))
+        if status in STATUSES:
+            counts[status] = count
     return [TimelineBucket(time_seconds=seconds, **counts) for seconds, counts in sorted(folded.items())]
 
 
@@ -255,17 +257,28 @@ def load_run(run_id: str) -> SimulateResponse | None:
 
 
 def timeline(run_id: str) -> TimelineResponse | None:
-    """Status counts per sample interval, computed in the database with time_bucket."""
+    """As-of counts: each item counts once, and only after its placement time."""
     bucket_seconds = config.FRAME_INTERVAL_SECONDS
     with _pool.connection() as conn:
-        run = conn.execute("SELECT start_time FROM runs WHERE run_id = %s", (run_id,)).fetchone()
+        run = conn.execute("SELECT start_time, duration_days FROM runs WHERE run_id = %s", (run_id,)).fetchone()
         if run is None:
             return None
         rows = conn.execute(
-            """SELECT time_bucket(%s * INTERVAL '1 second', time) AS bucket, status, count(*)
-               FROM positions WHERE run_id = %s
-               GROUP BY bucket, status ORDER BY bucket""",
-            (bucket_seconds, run_id),
+            """WITH buckets AS (
+                   SELECT generate_series(%s::timestamptz, %s::timestamptz,
+                                          %s * INTERVAL '1 second') AS bucket
+               ), items AS (
+                   SELECT DISTINCT item_id FROM positions WHERE run_id = %s
+               )
+               SELECT b.bucket, latest.status, count(latest.status)
+               FROM buckets b CROSS JOIN items i
+               LEFT JOIN LATERAL (
+                   SELECT status FROM positions
+                   WHERE run_id = %s AND item_id = i.item_id AND time <= b.bucket
+                   ORDER BY time DESC LIMIT 1
+               ) latest ON TRUE
+               GROUP BY b.bucket, latest.status ORDER BY b.bucket""",
+            (run[0], run[0] + timedelta(days=run[1]), bucket_seconds, run_id, run_id),
         ).fetchall()
     return TimelineResponse(run_id=str(run_id), bucket_seconds=bucket_seconds,
                             buckets=timeline_buckets(run[0], rows))
