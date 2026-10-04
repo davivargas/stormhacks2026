@@ -130,15 +130,38 @@ input:focus-visible {
 }
 
 .mapboxgl-ctrl-top-right {
-  top: 16px;
-  right: 14px;
+  top: 67px;
+  right: 8px;
 }
 
 .mapboxgl-ctrl-group {
+  width: 43px;
   overflow: hidden;
   border: 2px solid rgba(23, 59, 80, 0.1);
   border-radius: 16px;
   box-shadow: 0 5px 0 rgba(23, 59, 80, 0.12) !important;
+}
+
+.mapboxgl-ctrl-group button {
+  width: 100%;
+}
+
+.theme-toggle {
+  position: absolute;
+  z-index: 2;
+  top: 16px;
+  right: 14px;
+  display: grid;
+  width: 43px;
+  height: 43px;
+  place-items: center;
+  padding: 0;
+  border: 2px solid rgba(23, 59, 80, 0.1);
+  border-radius: 16px;
+  color: #173b50;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 5px 0 rgba(23, 59, 80, 0.12);
+  cursor: pointer;
 }
 
 .map-fallback {
@@ -424,7 +447,7 @@ input:focus-visible {
 
 .tool-grid {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .tool-button {
@@ -432,8 +455,8 @@ input:focus-visible {
   align-items: center;
   gap: 9px;
   width: 100%;
-  min-height: 50px;
-  padding: 7px 9px;
+  min-height: 42px;
+  padding: 3px 9px;
   border: 2px solid transparent;
   border-radius: 17px;
   background: transparent;
@@ -484,50 +507,15 @@ input:focus-visible {
 .tool-icon--bag { background: #ffe0e8; color: #d85578; }
 .tool-icon--foam { background: #fff0b6; color: #ac7510; }
 .tool-icon--collector { background: #d9eeff; color: #2479a7; }
+.tool-icon--narrate { background: #ece4ff; color: #6b4fc4; }
 .tool-icon--remove { background: #e8edf0; color: #526b78; }
-
-.current-key {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  margin-top: 14px;
-  padding-top: 13px;
-  border-top: 2px solid #eef4f5;
-}
-
-.current-key > span {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  border-radius: 50%;
-  color: #137e96;
-  background: #ddf5f7;
-  font-size: 1.35rem;
-  font-weight: 900;
-}
-
-.current-key p,
-.current-key strong {
-  display: block;
-  margin: 0;
-}
-
-.current-key p {
-  color: #78909c;
-  font-size: 0.66rem;
-  font-weight: 700;
-}
-
-.current-key strong {
-  color: #173b50;
-  font-size: 0.75rem;
-}
+.tool-icon--reset { background: #ffe3dc; color: #c4492f; }
 
 .guide-bubble {
   position: absolute;
   left: 18px;
-  bottom: 184px;
+  top: 540px;
+  bottom: auto;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -737,6 +725,90 @@ input:focus-visible {
   cursor: pointer;
 }
 
+.ocean-page--dark .theme-toggle {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #ffe58a;
+  background: rgba(24, 38, 53, 0.96);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
+}
+
+.ocean-page--dark .icon-button,
+.ocean-page--dark .reset-button {
+  color: #173b50;
+}
+
+.ocean-page--dark .topbar,
+.ocean-page--dark .tool-panel,
+.ocean-page--dark .guide-bubble,
+.ocean-page--dark .playback-card {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e8f2f4;
+  background: rgba(24, 38, 53, 0.96);
+  box-shadow: 0 7px 0 rgba(0, 0, 0, 0.28);
+}
+
+.ocean-page--dark .brand,
+.ocean-page--dark .tool-button strong,
+.ocean-page--dark .timeline label,
+.ocean-page--dark .timeline label strong,
+.ocean-page--dark .guide-bubble p {
+  color: #e8f2f4;
+}
+
+.ocean-page--dark .tool-button:hover {
+  background: #263f52;
+}
+
+.ocean-page--dark .tool-button--active {
+  background: #174e58;
+}
+
+.ocean-page--dark .tool-button small {
+  color: #9ab1ba;
+}
+
+.ocean-page--dark .source-button {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #d4e6ea;
+  background: rgba(24, 38, 53, 0.94);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28);
+}
+
+.ocean-page--dark .guide-bubble--speech::after {
+  border-color: rgba(22, 167, 124, 0.35);
+  background: #182635;
+}
+
+.ocean-page--dark .mapboxgl-ctrl-group {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: #182635;
+}
+
+.ocean-page--dark .mapboxgl-ctrl-group button {
+  filter: invert(0.85);
+}
+
+.ocean-page--dark .help-dialog {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #182635;
+  color: #e8f2f4;
+}
+
+.ocean-page--dark .help-dialog h2,
+.ocean-page--dark .help-dialog > p,
+.ocean-page--dark .goal-list p {
+  color: #d4e6ea;
+}
+
+.ocean-page--dark .goal-list article {
+  background: #213b4c;
+}
+
+.ocean-page--dark .help-close {
+  color: #e8f2f4;
+  background: #29485a;
+}
+
 @media (max-width: 900px) {
   .topbar {
     right: 10px;
@@ -755,13 +827,12 @@ input:focus-visible {
     border-radius: 20px;
   }
 
-  .panel-heading,
-  .current-key {
+  .panel-heading {
     display: none;
   }
 
   .tool-grid {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 5px;
   }
 
@@ -800,6 +871,7 @@ input:focus-visible {
 
   .guide-bubble {
     left: 12px;
+    top: auto;
     bottom: 206px;
     width: min(260px, calc(100vw - 24px));
     max-width: min(260px, calc(100vw - 24px));
@@ -830,6 +902,11 @@ input:focus-visible {
   }
 
   .mapboxgl-ctrl-top-right {
+    top: 61px;
+    right: 6px;
+  }
+
+  .theme-toggle {
     top: 10px;
     right: 10px;
   }

@@ -7,15 +7,19 @@ import {
   CircleHelp,
   Eraser,
   Info,
+  Mic,
+  Moon,
   X,
   Pause,
   Play,
   RotateCcw,
   Sparkles,
+  Sun,
+  Trash2,
   Waves,
 } from "lucide-react";
 import { OceanMap } from "./OceanMap";
-import { requestSimulation, SimulationApiError } from "./simulationApi";
+import { deleteSessionRuns, requestSimulation } from "./simulationApi";
 import type { SimulateResponse } from "./simulationApi";
 import { requestStoryAudio, requestStoryForRun } from "./storyApi";
 import {
@@ -27,6 +31,7 @@ import {
   audioTimeToTimeline,
   clampTimelineTime,
   DEFAULT_DURATION_SECONDS,
+  formatDurationLabel,
   formatTime,
   placementTime,
   SIMULATION_DURATION_DAYS,
@@ -38,8 +43,11 @@ const tools: Array<{ id: Tool; label: string; detail: string; icon: typeof CupSo
   { id: "bag", label: "Bag", detail: "Place in water", icon: Backpack },
   { id: "foam", label: "Foam", detail: "Place in water", icon: Sparkles },
   { id: "collector", label: "Cleanup", detail: "Catch litter", icon: Anchor },
+  { id: "narrate", label: "Narrate", detail: "Pick a litter", icon: Mic },
   { id: "remove", label: "Remove", detail: "Pick an item", icon: Eraser },
 ];
+
+const START_MESSAGE = "Choose a litter type, then click the ocean to place it.";
 
 const goalListVariants = {
   hidden: {},
@@ -95,10 +103,11 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   const [narrationLineIndex, setNarrationLineIndex] = useState(0);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isDataOpen, setIsDataOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationRun, setSimulationRun] = useState<SimulateResponse | null>(null);
   const [simulationError, setSimulationError] = useState<string | null>(null);
-  const [message, setMessage] = useState("Choose a litter type, then click the ocean to place it.");
+  const [message, setMessage] = useState(START_MESSAGE);
   const lastFrameRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const narrationSignatureRef = useRef<string | null>(null);
@@ -161,15 +170,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
         setTimeSeconds((current) => clampTimelineTime(current, run.totalSeconds));
       })
       .catch((error) => {
-        if (controller.signal.aborted || isAbortError(error)) return;
-        if (error instanceof SimulationApiError && error.code === "on_land" && error.placementId) {
-          const rejectedId = error.placementId;
-          setPlacements((current) => current.filter(({ id }) => id !== rejectedId));
-          setSelectedParticleId((current) => current === rejectedId ? null : current);
-          setSimulationError(null);
-          setMessage("That spot is too close to land for the ocean model. Try farther offshore.");
-          return;
-        }
+        if (isAbortError(error)) return;
         const detail = error instanceof Error ? error.message : "Could not run the ocean simulation.";
         setSimulationRun(null);
         setSimulationError(detail);
@@ -234,7 +235,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       const elapsed = timestamp - lastFrameRef.current;
       lastFrameRef.current = timestamp;
       setTimeSeconds((current) => {
-        const next = current + elapsed * 12;
+        const next = current + elapsed * (durationSeconds / 60_000);
         if (next >= durationSeconds) {
           setIsPlaying(false);
           return durationSeconds;
@@ -344,17 +345,17 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
   };
 
   const placeItem = (coordinates: Coordinates) => {
-    if (tool === "explore" || tool === "remove") return;
+    if (tool === "explore" || tool === "narrate" || tool === "remove") return;
     stopPlayback();
     const placedAtSeconds = placementTime(timeSeconds, durationSeconds);
     setTimeSeconds(placedAtSeconds);
     const item: Placement = { id: `${tool}-${crypto.randomUUID()}`, type: tool, coordinates, placedAtSeconds };
     setPlacements((current) => [...current, item]);
     if (item.type === "collector") {
-      setMessage("Checking that cleanup spot with the ocean model...");
+      setMessage("Great cleanup spot! Running the ocean simulation again...");
     } else {
       setSelectedParticleId(item.id);
-      setMessage(`${item.type[0].toUpperCase()}${item.type.slice(1)} selected! Checking ocean placement...`);
+      setMessage(`${item.type[0].toUpperCase()}${item.type.slice(1)} selected! Running the ocean simulation...`);
     }
   };
 
@@ -363,6 +364,11 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     if (!trajectory) return;
     stopPlayback();
     setSelectedParticleId(id);
+    if (tool === "narrate") {
+      setTool("explore");
+      setMessage(`Shelly will tell this ${trajectory.type}'s story. Press play to hear it!`);
+      return;
+    }
     const item = simulationRun?.items.find(({ id: itemId }) => itemId === trajectory.id);
     const finalStatus = item ? ` It ends ${statusLabel(item.finalStatus)}.` : "";
     setMessage(`${trajectory.type[0].toUpperCase()}${trajectory.type.slice(1)} selected from the backend run.${finalStatus} Press play for its journey.`);
@@ -379,11 +385,30 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
     setTimeSeconds(0);
     setMessage(placements.some(({ type }) => type !== "collector")
       ? "Restarted the backend simulation playback."
-      : "Choose a litter type, then click the ocean to place it.");
+      : START_MESSAGE);
+  };
+
+  const resetAll = () => {
+    stopPlayback();
+    detachAudio(audioRef.current);
+    audioRef.current = null;
+    setPlacements([]);
+    setSelectedParticleId(null);
+    setTool("explore");
+    setTimeSeconds(0);
+    setNarrationLines([]);
+    setNarrationLineIndex(0);
+    setMessage(START_MESSAGE);
+    const warn = () => setMessage("The map is reset, but the saved runs could not be deleted. Try Reset all again.");
+    deleteSessionRuns()
+      .then(({ database }) => {
+        if (database === "failed") warn();
+      })
+      .catch(warn);
   };
 
   return (
-    <main className="ocean-page">
+    <main className={`ocean-page ${isDarkMode ? "ocean-page--dark" : ""}`}>
       <OceanMap
         tool={tool}
         placements={placements}
@@ -398,6 +423,17 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
       />
 
       <div className="map-overlay">
+        <motion.button
+          className="theme-toggle"
+          type="button"
+          aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+          aria-pressed={isDarkMode}
+          onClick={() => setIsDarkMode((current) => !current)}
+          whileHover={{ scale: 1.06 }}
+          whileTap={{ scale: 0.94 }}
+        >
+          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+        </motion.button>
         <motion.header className="topbar" initial={{ opacity: 0, y: -24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}>
           <motion.a className="brand" href="#top" aria-label="LitterVoyage home" whileHover={{ y: -2 }}>
             <span className="brand-mark"><Waves size={27} /></span>
@@ -430,8 +466,20 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
                 {tool === id && <motion.span className="tool-selection-dot" layoutId="tool-selection" />}
               </motion.button>
             ))}
+            <motion.button
+              className="tool-button tool-button--reset"
+              type="button"
+              onClick={resetAll}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.28 + tools.length * 0.06, type: "spring", stiffness: 420, damping: 26 }}
+              whileHover={{ x: 5, scale: 1.015 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span className="tool-icon tool-icon--reset"><Trash2 size={24} /></span>
+              <span><strong>Reset all</strong><small>Clear the map</small></span>
+            </motion.button>
           </div>
-          <div className="current-key"><span>↗</span><p><strong>Ocean current</strong>Arrows show water direction</p></div>
         </motion.aside>
 
         <motion.section className={`guide-bubble ${isNarrating ? "guide-bubble--talking guide-bubble--speech" : ""}`} aria-live="polite" initial={{ opacity: 0, y: 22, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.5, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}>
@@ -484,7 +532,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
               />
               <div className="timeline-endpoints" aria-hidden="true">
                 <span>Start · 0 days</span>
-                <span>End · {durationSeconds / (24 * 60 * 60)} days</span>
+                <span>End · {formatDurationLabel(durationSeconds)}</span>
               </div>
             </div>
             {/* Comparison control temporarily hidden while the single cleanup mode is refined.
@@ -592,8 +640,8 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
                   <p>Place a bottle, bag, or foam item on the water. The map displays its marker, simulated trail, current direction, and any cleanup area you add.</p>
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
-                  <strong>How the ten-day model works</strong>
-                  <p>The backend calculates a ten-day experiment using ocean-current data. Positions are recorded hourly, with additional samples at placement and terminal events. An item placed on day three begins there and moves only through the remaining seven days.</p>
+                  <strong>How the one-year model works</strong>
+                  <p>The backend calculates a one-year educational experiment using ocean-current data. Positions are recorded hourly, with additional samples at placement and terminal events. An item begins moving when you place it on the shared timeline.</p>
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
                   <strong>Statuses and cleanup</strong>
@@ -601,7 +649,7 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
                   <strong>Model assumptions</strong>
-                  <p>Each area uses one frozen current snapshot throughout the experiment, with wave drift included when available. Tides, wind, sinking, and decomposition are not modeled. Ten simulated days are an educational experiment, not a changing ten-day forecast.</p>
+                  <p>Each area uses one frozen current snapshot throughout the experiment, with wave drift included when available. Tides, wind, sinking, and decomposition are not modeled. The simulated year is an educational “what if,” not a year-long forecast.</p>
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
                   <strong>Data sources and limitations</strong>

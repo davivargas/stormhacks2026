@@ -84,6 +84,8 @@ Use `data.totalSeconds` for the timeline length instead of the fixed `DURATION_S
 
 - `POST /api/simulate` takes `{placements, durationDays, collectorRadiusM, honourCollectors}`. `collectorRadiusM` is optional (default 10000 m). `honourCollectors` is optional and defaults to `false`: collectors are listed in the response with `capturedCount: 0` but do not capture anything. Send `true` to let them capture litter.
 - `POST /api/compare` takes the same body and returns `{without, with, delta}`: `without` ignores the collectors, `with` honours them, and `delta` is `with` minus `without` for the four status counts.
+- `sessionId` is an optional field on both bodies: 1 to 64 characters of `A-Z a-z 0-9 _ -`, one value per browser tab. It is stored with the run.
+- `DELETE /api/sessions/{sessionId}/runs` deletes every run saved with that `sessionId`, in memory and in Tiger Data (`runs` and `positions`). It returns `{deleted, database}`, where `database` is `cleared`, `unavailable` (no database configured) or `failed` (the database is configured but the delete did not happen). Cached current snapshots are kept.
 - Limits per run: at most 50 litter items, 20 collectors and 8 distinct areas (half-degree boxes); durations of 1 to 30 whole days. Breaking a limit is a 422 `invalid_request`.
 
 ## Latency

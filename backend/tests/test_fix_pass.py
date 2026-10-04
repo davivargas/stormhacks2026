@@ -54,14 +54,14 @@ def test_twenty_collectors_are_accepted():
 def test_too_many_distinct_areas_are_rejected_before_any_fetch(monkeypatch):
     calls = []
     monkeypatch.setattr(snapshot, "fetch_copernicus", lambda key: calls.append(key))
-    response = client.post("/api/simulate", json={"placements": bottles(9), "durationDays": 1})
+    response = client.post("/api/simulate", json={"placements": bottles(17), "durationDays": 1})
     assert response.status_code == 422
     assert response.json()["code"] == "invalid_request"
     assert calls == []
 
 
-def test_eight_distinct_areas_are_accepted():
-    response = client.post("/api/simulate", json={"placements": bottles(8), "durationDays": 1})
+def test_sixteen_distinct_areas_are_accepted():
+    response = client.post("/api/simulate", json={"placements": bottles(16), "durationDays": 1})
     assert response.status_code == 200
 
 

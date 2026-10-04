@@ -16,6 +16,7 @@ PlacementType = Literal["bottle", "bag", "foam", "collector"]
 ParticleStatus = Literal["floating", "captured", "beached", "outside"]
 SnapshotSource = Literal["copernicus", "synthetic"]
 Coordinates = tuple[float, float]  # [lon, lat]
+SESSION_ID_PATTERN = r"^[A-Za-z0-9_-]+$"  # one browser tab; the frontend sends a UUID
 
 
 class ApiModel(BaseModel):
@@ -56,6 +57,8 @@ class SimulateRequest(ApiModel):
     # Collectors are placed and reported either way; they only capture litter when this is true.
     # Off by default for now; /compare always runs both ways.
     honour_collectors: bool = False
+    # The browser tab that asked for the run, so that tab can delete its own runs later.
+    session_id: str | None = Field(default=None, min_length=1, max_length=64, pattern=SESSION_ID_PATTERN)
 
     @field_validator("placements")
     @classmethod
@@ -210,6 +213,13 @@ class MetaResponse(ApiModel):
 class HealthResponse(ApiModel):
     ok: bool
     db: bool
+
+
+class DeleteRunsResponse(ApiModel):
+    deleted: int
+    # cleared: removed from the database. unavailable: no database configured.
+    # failed: a database is configured but the delete did not happen; saved runs remain.
+    database: Literal["cleared", "unavailable", "failed"]
 
 
 class ErrorResponse(ApiModel):

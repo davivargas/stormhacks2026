@@ -17,8 +17,8 @@ load_dotenv(BACKEND_ROOT / ".env")
 
 # Durations: whole days, one timeline per run.
 DURATION_MIN_DAYS = 1
-DURATION_MAX_DAYS = 30
-DURATION_DEFAULT_DAYS = 7
+DURATION_MAX_DAYS = 365
+DURATION_DEFAULT_DAYS = 365
 
 # Integration.
 DT_SECONDS = 600  # 10 min Euler step
@@ -28,11 +28,11 @@ FRAME_INTERVAL_SECONDS = 3600  # one recorded sample per hour
 DEFAULT_COLLECTOR_RADIUS_M = 10_000.0
 MAX_LITTER_PLACEMENTS = 50
 MAX_COLLECTORS = 20
-MAX_DISTINCT_BOXES = 8  # snapshot boxes (areas) one request may need
+MAX_DISTINCT_BOXES = 16  # snapshot boxes (areas) one request may need
 
 # Snapshot box.
 # Slicing a box from the open Copernicus handle takes 5-12 s at any size up to 25 deg (measured),
-# so the cap sits just above the 30-day formula value (24.5) and never cuts a box short.
+# Long experiments remain capped to a practical regional field and can end outside the modeled area.
 HALF_WIDTH_CAP_DEG = 25.0
 # Boxes with more cells than this are not cached in Tiger: a 25 deg box is ~360,000 rows (tens of MB,
 # about a minute to upload) while refetching it takes seconds. 60,000 covers boxes up to 10 deg.

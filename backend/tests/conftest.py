@@ -25,3 +25,4 @@ def isolated(monkeypatch):
     monkeypatch.setattr(db, "_down_until", 0.0)
     snapshot._cache.clear()
     routes._runs.clear()
+    routes._run_sessions.clear()

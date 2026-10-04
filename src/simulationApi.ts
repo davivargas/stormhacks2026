@@ -13,6 +13,7 @@ export interface SimulateRequest {
   durationDays: number;
   collectorRadiusM?: number;
   honourCollectors: boolean;
+  sessionId?: string;
 }
 
 export interface ItemResult {
@@ -64,34 +65,37 @@ export interface SimulateResponse {
   persisted: boolean;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+export interface DeleteRunsResponse {
+  deleted: number;
+  database: "cleared" | "unavailable" | "failed";
+}
 
-export class SimulationApiError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-    readonly code?: string,
-    readonly placementId?: string,
-  ) {
-    super(message);
-    this.name = "SimulationApiError";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const SESSION_STORAGE_KEY = "littervoyage-session-id";
+
+// One id per browser tab. sessionStorage keeps it across reloads, so runs saved before a
+// reload can still be deleted; without storage the id lasts until the page is closed.
+function loadSessionId(): string {
+  try {
+    const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (stored && /^[A-Za-z0-9_-]{1,64}$/.test(stored)) return stored;
+    const created = crypto.randomUUID();
+    sessionStorage.setItem(SESSION_STORAGE_KEY, created);
+    return created;
+  } catch {
+    return crypto.randomUUID();
   }
 }
+
+export const SESSION_ID = loadSessionId();
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as {
-      code?: string;
       detail?: string;
       message?: string;
-      placementId?: string;
     } | null;
-    throw new SimulationApiError(
-      body?.message ?? body?.detail ?? `LitterVoyage API request failed (${response.status})`,
-      response.status,
-      body?.code,
-      body?.placementId,
-    );
+    throw new Error(body?.message ?? body?.detail ?? `LitterVoyage API request failed (${response.status})`);
   }
   return response.json() as Promise<T>;
 }
@@ -113,6 +117,7 @@ export async function requestSimulation(
       })),
       durationDays: options.durationDays,
       honourCollectors: options.honourCollectors,
+      sessionId: SESSION_ID,
     } satisfies SimulateRequest),
   });
   const run = await parseResponse<SimulateResponse>(response);
@@ -120,4 +125,9 @@ export async function requestSimulation(
     throw new Error("The backend returned a different experiment duration. Please retry the simulation.");
   }
   return run;
+}
+
+export async function deleteSessionRuns(): Promise<DeleteRunsResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/sessions/${SESSION_ID}/runs`, { method: "DELETE" });
+  return parseResponse<DeleteRunsResponse>(response);
 }

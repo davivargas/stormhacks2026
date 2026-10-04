@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   audioTimeToTimeline,
   DEFAULT_DURATION_SECONDS,
+  formatDurationLabel,
   formatTime,
   placementTime,
   SECONDS_PER_DAY,
@@ -9,25 +10,26 @@ import {
   timelineTimeToAudio,
 } from "./timeline";
 import { impactEventsBetween, interpolateFrame, trailGeoJson } from "./simulation";
-import { requestSimulation, SimulationApiError } from "./simulationApi";
+import { requestSimulation } from "./simulationApi";
 import type { ParticleTrajectory } from "./types";
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("ten-day timeline", () => {
+describe("one-year timeline", () => {
   it("formats the start, day boundaries, and endpoint", () => {
     expect(formatTime(0)).toBe("0d 00h 00m");
     expect(formatTime(SECONDS_PER_DAY)).toBe("1d 00h 00m");
     expect(formatTime(3.5 * SECONDS_PER_DAY)).toBe("3d 12h 00m");
-    expect(formatTime(DEFAULT_DURATION_SECONDS)).toBe("10d 00h 00m");
+    expect(formatTime(DEFAULT_DURATION_SECONDS)).toBe("1y 0d 00h 00m");
+    expect(formatDurationLabel(DEFAULT_DURATION_SECONDS)).toBe("1 year");
   });
 
   it("maps narration seeking onto all ten days and clamps overruns", () => {
-    expect(audioTimeToTimeline(15, 60, DEFAULT_DURATION_SECONDS)).toBe(216000);
-    expect(timelineTimeToAudio(7.5 * SECONDS_PER_DAY, DEFAULT_DURATION_SECONDS, 60)).toBe(45);
-    expect(audioTimeToTimeline(65, 60, DEFAULT_DURATION_SECONDS)).toBe(864000);
+    expect(audioTimeToTimeline(15, 60, DEFAULT_DURATION_SECONDS)).toBe(7884000);
+    expect(timelineTimeToAudio(DEFAULT_DURATION_SECONDS * 0.75, DEFAULT_DURATION_SECONDS, 60)).toBe(45);
+    expect(audioTimeToTimeline(65, 60, DEFAULT_DURATION_SECONDS)).toBe(31536000);
     expect(audioTimeToTimeline(0, NaN, DEFAULT_DURATION_SECONDS)).toBe(0);
-    expect(placementTime(864000.6, DEFAULT_DURATION_SECONDS)).toBe(864000);
+    expect(placementTime(31536000.6, DEFAULT_DURATION_SECONDS)).toBe(31536000);
     expect(placementTime(-10, DEFAULT_DURATION_SECONDS)).toBe(0);
   });
 
@@ -63,36 +65,21 @@ describe("ten-day timeline", () => {
     expect(interpolateFrame([endpoint], 864000)[0].coordinates).toEqual([180.2, 0]);
   });
 
-  it("sends a ten-day request with a bounded whole-second placement time", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ durationDays: 10, totalSeconds: 864000 })));
+  it("sends a one-year request with a bounded whole-second placement time", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ durationDays: 365, totalSeconds: 31536000 })));
     vi.stubGlobal("fetch", fetchMock);
-    await requestSimulation([{ id: "end", type: "bottle", coordinates: [-130, 40], placedAtSeconds: 864000.1 }], {
+    await requestSimulation([{ id: "end", type: "bottle", coordinates: [-130, 40], placedAtSeconds: 31536000.1 }], {
       durationDays: SIMULATION_DURATION_DAYS,
       honourCollectors: true,
     });
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
-      durationDays: 10,
-      placements: [{ placedAtSeconds: 864000 }],
+      durationDays: 365,
+      placements: [{ placedAtSeconds: 31536000 }],
     });
   });
 
   it("rejects a backend response whose duration does not match the request", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ durationDays: 1, totalSeconds: 86400 }))));
-    await expect(requestSimulation([], { durationDays: 10, honourCollectors: true })).rejects.toThrow("different experiment duration");
-  });
-
-  it("preserves the rejected placement id from backend validation errors", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      code: "on_land",
-      message: "That spot is land. Try the water!",
-      placementId: "bottle-near-shore",
-    }), { status: 422, headers: { "Content-Type": "application/json" } })));
-
-    await expect(requestSimulation([], { durationDays: 10, honourCollectors: true })).rejects.toMatchObject({
-      name: "SimulationApiError",
-      status: 422,
-      code: "on_land",
-      placementId: "bottle-near-shore",
-    } satisfies Partial<SimulationApiError>);
+    await expect(requestSimulation([], { durationDays: 365, honourCollectors: true })).rejects.toThrow("different experiment duration");
   });
 });

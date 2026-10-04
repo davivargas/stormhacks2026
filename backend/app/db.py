@@ -79,6 +79,11 @@ def report_failure() -> None:
     log.warning("database error, skipping it for %s seconds", config.DATABASE_RETRY_S)
 
 
+def configured() -> bool:
+    """True when a pool exists, even while it is skipped after an error."""
+    return _pool is not None
+
+
 def available() -> bool:
     return _pool is not None and time.monotonic() >= _down_until
 
@@ -282,3 +287,15 @@ def timeline(run_id: str) -> TimelineResponse | None:
         ).fetchall()
     return TimelineResponse(run_id=str(run_id), bucket_seconds=bucket_seconds,
                             buckets=timeline_buckets(run[0], rows))
+
+
+def delete_session_runs(session_id: str) -> int:
+    """Delete every run one browser session saved, with its positions. Returns the number of runs."""
+    with _pool.connection() as conn:  # one transaction
+        # Runs first: a run saved while this executes is then either deleted whole or kept whole.
+        run_ids = [row[0] for row in conn.execute(
+            "DELETE FROM runs WHERE params->>'sessionId' = %s RETURNING run_id", (session_id,)
+        ).fetchall()]
+        if run_ids:
+            conn.execute("DELETE FROM positions WHERE run_id = ANY(%s)", (run_ids,))
+        return len(run_ids)
