@@ -17,8 +17,8 @@ load_dotenv(BACKEND_ROOT / ".env")
 
 # Durations: whole days, one timeline per run.
 DURATION_MIN_DAYS = 1
-DURATION_MAX_DAYS = 365
-DURATION_DEFAULT_DAYS = 365
+DURATION_MAX_DAYS = 60
+DURATION_DEFAULT_DAYS = 60
 
 # Integration.
 DT_SECONDS = 600  # 10 min Euler step

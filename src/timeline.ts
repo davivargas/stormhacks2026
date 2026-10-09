@@ -1,6 +1,6 @@
 export const SECONDS_PER_DAY = 24 * 60 * 60;
 export const DAYS_PER_YEAR = 365;
-export const SIMULATION_DURATION_DAYS = DAYS_PER_YEAR;
+export const SIMULATION_DURATION_DAYS = 60;
 export const DEFAULT_DURATION_SECONDS = SIMULATION_DURATION_DAYS * SECONDS_PER_DAY;
 
 export function clampTimelineTime(seconds: number, durationSeconds: number) {

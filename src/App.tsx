@@ -640,8 +640,8 @@ INITIAL_PLACEMENTS.find(({ type }) => type !== "collector")?.id ?? null,
                   <p>Place a bottle, bag, or foam item on the water. The map displays its marker, simulated trail, current direction, and any cleanup area you add.</p>
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
-                  <strong>How the one-year model works</strong>
-                  <p>The backend calculates a one-year educational experiment using ocean-current data. Positions are recorded hourly, with additional samples at placement and terminal events. An item begins moving when you place it on the shared timeline.</p>
+                  <strong>How the 60-day model works</strong>
+                  <p>The backend calculates a 60-day educational experiment using ocean-current data. Positions are recorded hourly, with additional samples at placement and terminal events. An item begins moving when you place it on the shared timeline.</p>
                 </motion.article>
                 <motion.article variants={prefersReducedMotion ? undefined : goalCardVariants}>
                   <strong>Statuses and cleanup</strong>
